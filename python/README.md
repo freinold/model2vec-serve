@@ -1,4 +1,4 @@
-# model2vec-serve
+# model2vec-serve - Python version
 
 Minimal OpenAI-compatible embeddings server for [model2vec](https://github.com/minishlab/model2vec) static embedding models.
 
