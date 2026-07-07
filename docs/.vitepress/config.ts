@@ -6,8 +6,15 @@ export default defineConfig({
   base: '/model2vec-serve/',
   cleanUrls: true,
   lastUpdated: true,
+  appearance: 'dark',
+
+  head: [
+    ['link', { rel: 'icon', type: 'image/png', href: '/model2vec-serve/model2vec_logo.png' }],
+  ],
 
   themeConfig: {
+    logo: { src: '/model2vec_logo.png', alt: 'model2vec logo' },
+
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Guide', link: '/introduction' },
@@ -49,7 +56,7 @@ export default defineConfig({
     ],
 
     footer: {
-      message: 'Released under the MIT License.',
+      message: 'Powered by model2vec',
     },
 
     editLink: {
