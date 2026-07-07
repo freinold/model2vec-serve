@@ -28,11 +28,11 @@ description: "Task list template for feature implementation"
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create Rust project files `Cargo.toml`, `src/main.rs`, and workspace layout
-- [ ] T002 Add runtime dependencies to `Cargo.toml` (`axum`, `utoipa`, `utoipa-scalar`, `model2vec-rs`, `tokio`, `serde`, `clap`, `tracing`, `tracing-subscriber`, `metrics`, `metrics-exporter-prometheus`, `tower-http`)
-- [ ] T003 [P] Configure linting and formatting with `rustfmt.toml` and `clippy` CI checks
-- [ ] T004 Create multi-stage `Dockerfile` for the service
-- [ ] T005 Create directory layout (`src/routes/`, `src/model/`, `tests/contract/`, `tests/integration/`, `tests/unit/`, `helm/model2vec-serve/`)
+- [x] T001 Create Rust project files `Cargo.toml`, `src/main.rs`, and workspace layout
+- [x] T002 Add runtime dependencies to `Cargo.toml` (`axum`, `utoipa`, `utoipa-scalar`, `model2vec-rs`, `tokio`, `serde`, `clap`, `tracing`, `tracing-subscriber`, `metrics`, `metrics-exporter-prometheus`, `tower-http`)
+- [x] T003 [P] Configure linting and formatting with `rustfmt.toml` and `clippy` CI checks
+- [x] T004 Create multi-stage `Dockerfile` for the service
+- [x] T005 Create directory layout (`src/routes/`, `src/model/`, `tests/contract/`, `tests/integration/`, `tests/unit/`, `helm/model2vec-serve/`)
 
 ---
 
@@ -42,14 +42,14 @@ description: "Task list template for feature implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Define `Config` struct and CLI argument parsing in `src/config.rs`
-- [ ] T007 Implement `AppError` enum and `IntoResponse` mapping in `src/errors.rs`
-- [ ] T008 Set up structured logging, request correlation IDs, and tracing subscriber in `src/telemetry.rs`
-- [ ] T009 Create shared `AppState` in `src/state.rs`
-- [ ] T010 [P] Create model2vec inference wrapper in `src/model/embedding.rs`
-- [ ] T011 Implement model loading at startup in `src/main.rs`
-- [ ] T012 Set up axum router skeleton and Tower middleware layers in `src/routes/mod.rs`
-- [ ] T013 [P] Create shared request/response DTOs in `src/routes/dto.rs`
+- [x] T006 Define `Config` struct and CLI argument parsing in `src/config.rs`
+- [x] T007 Implement `AppError` enum and `IntoResponse` mapping in `src/errors.rs`
+- [x] T008 Set up structured logging, request correlation IDs, and tracing subscriber in `src/telemetry.rs`
+- [x] T009 Create shared `AppState` in `src/state.rs`
+- [x] T010 [P] Create model2vec inference wrapper in `src/model/embedding.rs`
+- [x] T011 Implement model loading at startup in `src/main.rs`
+- [x] T012 Set up axum router skeleton and Tower middleware layers in `src/routes/mod.rs`
+- [x] T013 [P] Create shared request/response DTOs in `src/routes/dto.rs`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -65,15 +65,15 @@ description: "Task list template for feature implementation"
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T014 [P] [US1] Contract test for `/v1/embeddings` response shape in `tests/contract/openai.rs`
-- [ ] T015 [P] [US1] Integration test for single and batch embedding requests in `tests/integration/openai.rs`
+- [x] T014 [P] [US1] Contract test for `/v1/embeddings` response shape in `tests/contract/openai.rs`
+- [x] T015 [P] [US1] Integration test for single and batch embedding requests in `tests/integration/openai.rs`
 
 ### Implementation for User Story 1
 
-- [ ] T016 [P] [US1] Create OpenAI request/response types in `src/routes/dto.rs`
-- [ ] T017 [US1] Implement `/v1/embeddings` handler in `src/routes/embeddings.rs`
-- [ ] T018 [US1] Add input validation (empty input, encoding format, model name) in `src/routes/embeddings.rs`
-- [ ] T019 [US1] Wire OpenAI route into `src/routes/mod.rs`
+- [x] T016 [P] [US1] Create OpenAI request/response types in `src/routes/dto.rs`
+- [x] T017 [US1] Implement `/v1/embeddings` handler in `src/routes/embeddings.rs`
+- [x] T018 [US1] Add input validation (empty input, encoding format, model name) in `src/routes/embeddings.rs`
+- [x] T019 [US1] Wire OpenAI route into `src/routes/mod.rs`
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -87,15 +87,15 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 2 (MANDATORY) ⚠️
 
-- [ ] T020 [P] [US2] Contract test for TEI `/embed` and `/info` in `tests/contract/tei.rs`
-- [ ] T021 [P] [US2] Integration test for TEI endpoints in `tests/integration/tei.rs`
+- [x] T020 [P] [US2] Contract test for TEI `/embed` and `/info` in `tests/contract/tei.rs`
+- [x] T021 [P] [US2] Integration test for TEI endpoints in `tests/integration/tei.rs`
 
 ### Implementation for User Story 2
 
-- [ ] T022 [P] [US2] Create TEI request/response types in `src/routes/tei.rs`
-- [ ] T023 [US2] Implement TEI `/embed` handler in `src/routes/tei.rs`
-- [ ] T024 [US2] Implement TEI `/info` handler in `src/routes/tei.rs`
-- [ ] T025 [US2] Wire TEI routes into `src/routes/mod.rs`
+- [x] T022 [P] [US2] Create TEI request/response types in `src/routes/tei.rs`
+- [x] T023 [US2] Implement TEI `/embed` handler in `src/routes/tei.rs`
+- [x] T024 [US2] Implement TEI `/info` handler in `src/routes/tei.rs`
+- [x] T025 [US2] Wire TEI routes into `src/routes/mod.rs`
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -109,13 +109,13 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 3 (MANDATORY) ⚠️
 
-- [ ] T026 [P] [US3] Contract test for `/health` response in `tests/contract/health.rs`
-- [ ] T027 [P] [US3] Integration test for `/health` and `/ready` in `tests/integration/health.rs`
+- [x] T026 [P] [US3] Contract test for `/health` response in `tests/contract/health.rs`
+- [x] T027 [P] [US3] Integration test for `/health` and `/ready` in `tests/integration/health.rs`
 
 ### Implementation for User Story 3
 
-- [ ] T028 [US3] Implement `HealthStatus` response and readiness logic in `src/routes/health.rs`
-- [ ] T029 [US3] Wire health routes into `src/routes/mod.rs`
+- [x] T028 [US3] Implement `HealthStatus` response and readiness logic in `src/routes/health.rs`
+- [x] T029 [US3] Wire health routes into `src/routes/mod.rs`
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently
 
@@ -129,13 +129,13 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 4 (MANDATORY) ⚠️
 
-- [ ] T030 [P] [US4] Contract test for unauthorized requests in `tests/contract/auth.rs`
-- [ ] T031 [P] [US4] Integration test for API key middleware in `tests/integration/auth.rs`
+- [x] T030 [P] [US4] Contract test for unauthorized requests in `tests/contract/auth.rs`
+- [x] T031 [P] [US4] Integration test for API key middleware in `tests/integration/auth.rs`
 
 ### Implementation for User Story 4
 
-- [ ] T032 [US4] Implement API key Tower layer in `src/auth.rs`
-- [ ] T033 [US4] Apply auth layer to embeddings endpoints in `src/routes/mod.rs`
+- [x] T032 [US4] Implement API key Tower layer in `src/auth.rs`
+- [x] T033 [US4] Apply auth layer to embeddings endpoints in `src/routes/mod.rs`
 
 **Checkpoint**: At this point, User Stories 1 through 4 should all work independently
 
@@ -154,12 +154,12 @@ description: "Task list template for feature implementation"
 
 ### Implementation for User Story 5
 
-- [ ] T036 [P] [US5] Create Helm chart structure (`Chart.yaml`, `values.yaml`, `templates/`) in `helm/model2vec-serve/`
-- [ ] T037 [US5] Implement `Deployment` template with CLI arg mapping in `helm/model2vec-serve/templates/deployment.yaml`
-- [ ] T038 [US5] Implement `Service` template in `helm/model2vec-serve/templates/service.yaml`
-- [ ] T039 [US5] Implement `Secret` and `ConfigMap` templates in `helm/model2vec-serve/templates/`
-- [ ] T040 [US5] Add `values.yaml` with documented defaults for model source, API key, replicas, resources, and volume mounts
-- [ ] T041 [US5] Add `README.md` and `NOTES.txt` to `helm/model2vec-serve/`
+- [x] T036 [P] [US5] Create Helm chart structure (`Chart.yaml`, `values.yaml`, `templates/`) in `helm/model2vec-serve/`
+- [x] T037 [US5] Implement `Deployment` template with CLI arg mapping in `helm/model2vec-serve/templates/deployment.yaml`
+- [x] T038 [US5] Implement `Service` template in `helm/model2vec-serve/templates/service.yaml`
+- [x] T039 [US5] Implement `Secret` and `ConfigMap` templates in `helm/model2vec-serve/templates/`
+- [x] T040 [US5] Add `values.yaml` with documented defaults for model source, API key, replicas, resources, and volume mounts
+- [x] T041 [US5] Add `README.md` and `NOTES.txt` to `helm/model2vec-serve/`
 
 **Checkpoint**: At this point, the Helm chart can deploy the service independently
 
@@ -173,15 +173,15 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 6 (MANDATORY) ⚠️
 
-- [ ] T042 [P] [US6] Contract test for `/metrics` format in `tests/contract/metrics.rs`
-- [ ] T043 [P] [US6] Integration test for metrics and logs in `tests/integration/observability.rs`
+- [x] T042 [P] [US6] Contract test for `/metrics` format in `tests/contract/metrics.rs`
+- [x] T043 [P] [US6] Integration test for metrics and logs in `tests/integration/observability.rs`
 
 ### Implementation for User Story 6
 
-- [ ] T044 [US6] Add Prometheus metrics recorder in `src/telemetry.rs`
-- [ ] T045 [US6] Implement `/metrics` handler in `src/routes/metrics.rs`
-- [ ] T046 [US6] Add request logging layer with correlation IDs in `src/telemetry.rs`
-- [ ] T047 [US6] Wire metrics route into `src/routes/mod.rs`
+- [x] T044 [US6] Add Prometheus metrics recorder in `src/telemetry.rs`
+- [x] T045 [US6] Implement `/metrics` handler in `src/routes/metrics.rs`
+- [x] T046 [US6] Add request logging layer with correlation IDs in `src/telemetry.rs`
+- [x] T047 [US6] Wire metrics route into `src/routes/mod.rs`
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -191,13 +191,13 @@ description: "Task list template for feature implementation"
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T048 [P] Update `README.md` and `docs/` with usage and deployment instructions
-- [ ] T049 Code cleanup and clippy fixes across `src/`
-- [ ] T050 Performance benchmark for embeddings endpoint in `benches/embeddings.rs`
-- [ ] T051 [P] Additional unit tests for config and validation in `tests/unit/`
-- [ ] T052 Security review of secret handling and input validation
+- [x] T048 [P] Update `README.md` and `docs/` with usage and deployment instructions
+- [x] T049 Code cleanup and clippy fixes across `src/`
+- [x] T050 Performance benchmark for embeddings endpoint in `benches/embeddings.rs`
+- [x] T051 [P] Additional unit tests for config and validation in `tests/unit/`
+- [x] T052 Security review of secret handling and input validation
 - [ ] T053 Run `quickstart.md` validation scenarios
-- [ ] T054 Build and smoke-test container image
+- [x] T054 Build and smoke-test container image
 
 ---
 
