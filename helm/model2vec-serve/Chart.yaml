@@ -1,0 +1,6 @@
+apiVersion: v2
+name: model2vec-serve
+description: Lightweight OpenAI/TEI compatible model2vec embeddings server
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

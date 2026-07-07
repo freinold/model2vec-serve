@@ -1,0 +1,53 @@
+# Default values for model2vec-serve.
+replicaCount: 1
+
+image:
+  repository: model2vec-serve
+  pullPolicy: IfNotPresent
+  tag: ""
+
+# Hugging Face model id or local path mounted into the container.
+model: "minishlab/potion-base-2M"
+
+# Optional API key. Leave empty to disable authentication.
+apiKey: ""
+
+# Extra command-line arguments passed to the model2vec-serve binary.
+args: []
+
+# Extra environment variables.
+env: []
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1500Mi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+# Horizontal Pod Autoscaler configuration.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Additional volumes to mount model files or secrets.
+extraVolumes: []
+extraVolumeMounts: []
+
+# Pod security context.
+podSecurityContext: {}
+securityContext: {}
+
+# Node selector, affinity and tolerations.
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,67 @@
+[package]
+name = "model2vec-serve"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["freinold"]
+license = "MIT"
+description = "Lightweight OpenAI and TEI compatible embeddings server for model2vec models"
+repository = "https://github.com/freinold/model2vec-serve"
+
+[[bin]]
+name = "model2vec-serve"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+axum = "0.8"
+base64 = "0.22"
+clap = { version = "4", features = ["derive", "env"] }
+metrics = "0.24"
+metrics-exporter-prometheus = "0.17"
+model2vec-rs = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = [
+    "trace",
+    "timeout",
+    "cors",
+    "compression-full",
+] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [
+    "json",
+    "env-filter",
+    "fmt",
+] }
+utoipa = { version = "5", features = ["axum_extras"] }
+utoipa-scalar = { version = "0.3", features = ["axum"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["async_tokio"] }
+http-body-util = "0.1"
+hf-hub = "0.4"
+serde_json = "1"
+tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
+
+[[bench]]
+name = "embeddings"
+harness = false
+
+[profile.release]
+lto = true
+codegen-units = 1
+
+[lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "deny"
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
