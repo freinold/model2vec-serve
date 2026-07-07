@@ -100,6 +100,27 @@ This guide validates the feature end-to-end after implementation.
 
 3. Run the same curl checks as in the local section.
 
+## Published image validation
+
+After a release, the container image is published to GHCR and can be pulled
+without building locally:
+
+1. Pull the image for a released version:
+
+   ```bash
+   docker pull ghcr.io/freinold/model2vec-serve:v0.1.0
+   ```
+
+2. Run the published image:
+
+   ```bash
+   docker run -p 8080:8080 \
+     -e MODEL=minishlab/potion-base-32M \
+     ghcr.io/freinold/model2vec-serve:v0.1.0
+   ```
+
+3. Verify health and call the OpenAI-compatible endpoint as in the local section.
+
 ## Helm validation
 
 1. Install the chart with a model and optional API key:

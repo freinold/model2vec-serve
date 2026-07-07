@@ -35,7 +35,12 @@ for cached or air-gapped models.
 startup. Local model files may be mounted into the container via Helm volumes.
 
 **Testing**: `cargo test` with unit, contract, and integration tests. Contract
-tests validate OpenAI and TEI response shapes against the OpenAPI spec.
+ tests validate OpenAI and TEI response shapes against the OpenAPI spec.
+
+**CI/CD**: GitHub Actions workflows build and push the container image to GHCR on
+ every GitHub release, and `release-plz` automates SemVer releases from
+ Conventional Commits. See `research.md` for workflow details.
+
 
 **Target Platform**: Linux container (`linux/amd64`, `linux/arm64`) deployed to
 Kubernetes via Helm.
@@ -94,6 +99,11 @@ specs/001-model2vec-embedding-api/
 Cargo.toml
 Cargo.lock
 Dockerfile
+.github/
+└── workflows/
+    ├── docker.yml       # Build and push image to GHCR on releases
+    ├── release.yml      # release-plz semantic-release automation
+    └── docs.yml         # VitePress documentation deployment
 src/
 ├── main.rs              # CLI parsing, startup, graceful shutdown
 ├── config.rs            # Runtime configuration struct and validation

@@ -94,3 +94,76 @@ package it with a Helm chart under `helm/model2vec-serve`.
 - Helm is the requested deployment method and supports volume mounts for model
   files or secrets.
 - A `values.yaml` with documented defaults keeps operator configuration simple.
+
+## Decision: CI/CD image publishing
+
+**Decision**: Use a GitHub Actions workflow that builds the `Dockerfile` and
+pushes the resulting image to the GitHub Container Registry (GHCR) on every
+tagged release.
+
+**Rationale**:
+- GHCR is free for public repositories, integrated with GitHub permissions, and
+  requires no extra secrets beyond the auto-generated `GITHUB_TOKEN`.
+- Triggering on `release: [published]` (created from a git tag) produces
+  immutable, versioned images that operators can pin in Helm `image.tag`.
+- The official `docker/build-push-action`, `docker/metadata-action`, and
+  `docker/login-action` actions are maintained by Docker and are the de-facto
+  standard for building and tagging images.
+- `docker/metadata-action` automatically derives `latest`, semver, and
+  type=sha tags from git refs, removing manual tag bookkeeping.
+- Artifact attestations (`actions/attest`) increase supply-chain security by
+  publishing signed provenance for the image digest.
+
+**Workflow outline**:
+- `actions/checkout@v4`
+- `docker/setup-buildx-action@v3`
+- `docker/login-action@v3` to GHCR with `secrets.GITHUB_TOKEN`
+- `docker/metadata-action@v5` for `ghcr.io/${{ github.repository }}` tags
+- `docker/build-push-action@v6` with `push: true`, multi-platform via
+  `platforms: linux/amd64,linux/arm64`
+- `actions/attest@v4` to generate an attestation for the pushed digest
+
+**Permissions**:
+- `packages: write` to push the image.
+- `contents: read` to check out the repo.
+- `attestations: write` and `id-token: write` for artifact attestations.
+
+**Alternatives considered**:
+- Trigger on every push to `main` with a `latest` tag only — rejected because it
+  provides no stable versioned images and makes rollbacks harder.
+- Trigger on git tags directly (`on: push: tags: ['v*']`) — acceptable, but
+  `release: published` is more explicit and integrates with GitHub releases.
+- Push to Docker Hub — rejected to avoid managing a second registry and secrets
+  when GHCR is sufficient for an open-source project.
+
+## Decision: Semantic release automation for Rust
+
+**Decision**: Use `release-plz` to automate changelog generation, version
+bumping, git tagging, GitHub releases, and (optionally) crates.io publishing.
+
+**Rationale**:
+- `release-plz` is purpose-built for Rust/Cargo projects and understands
+  `Cargo.toml` versioning and workspace layouts.
+- It parses Conventional Commits to determine the next SemVer version.
+- It runs `cargo-semver-checks` to detect API-breaking changes automatically.
+- It opens a release PR with updated `Cargo.toml` versions and `CHANGELOG.md`,
+  giving maintainers a review checkpoint before a release is published.
+- A separate `release-plz release` job publishes the GitHub release and tag
+  after the PR is merged.
+
+**Configuration**:
+- GitHub workflow at `.github/workflows/release.yml` with two jobs:
+  `release-plz-release` (publish on push to `main`) and
+  `release-plz-pr` (open/update release PR on push to `main`).
+- `.release-plz.toml` to disable crates.io publishing if the crate is not meant
+  to be published, or to configure changelog formatting.
+- Repository secret: `GITHUB_TOKEN` is sufficient for GitHub releases; add
+  `CARGO_REGISTRY_TOKEN` only if publishing to crates.io.
+
+**Alternatives considered**:
+- `semantic-release` (Node.js-based) — would introduce a Node dependency and
+  require a custom Rust plugin; rejected in favor of a Rust-native tool.
+- `cargo-release` — excellent for manual releases but does not automatically
+  create release PRs from Conventional Commits; rejected for less automation.
+- Manual versioning — rejected because it is error-prone and inconsistent with
+  the Constitution's release workflow requirement.
