@@ -7,6 +7,7 @@ authors = ["freinold"]
 license = "MIT"
 description = "Lightweight OpenAI and TEI compatible embeddings server for model2vec models"
 repository = "https://github.com/freinold/model2vec-serve"
+publish = false
 
 [[bin]]
 name = "model2vec-serve"

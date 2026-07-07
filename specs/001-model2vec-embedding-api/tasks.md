@@ -199,6 +199,23 @@ description: "Task list template for feature implementation"
 - [x] T053 Run `quickstart.md` validation scenarios
 - [x] T054 Build and smoke-test container image
 
+## Phase 10: CI/CD and Release Automation
+
+**Purpose**: Publish container images and automate semantic releases
+
+- [ ] T055 Create `.github/workflows/docker.yml` to build and push the image to
+      GHCR on every GitHub release
+- [ ] T056 Create `.github/workflows/release.yml` to run `release-plz` on pushes
+      to `main`
+- [ ] T057 Create `.release-plz.toml` to disable crates.io publishing and enable
+      GitHub releases
+- [ ] T058 Add `publish = false` to `Cargo.toml` to prevent accidental crates.io
+      publishes of the binary
+- [ ] T059 Update `specs/001-model2vec-embedding-api/quickstart.md` with
+      published-image validation steps
+- [ ] T060 Update `docs/deployment/docker.md` to reference the GHCR image and
+      release tag strategy
+
 ---
 
 ## Dependencies & Execution Order

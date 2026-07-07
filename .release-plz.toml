@@ -1,0 +1,16 @@
+[workspace]
+# Allow release-plz to manage a single crate in the repository root.
+release = true
+
+[[package]]
+name = "model2vec-serve"
+# Do not publish to crates.io; this is an application binary distributed as a
+# container image. The `publish = false` field in Cargo.toml is also respected.
+publish = false
+# Publish a GitHub release and tag for each release.
+git_release_enable = true
+git_tag_enable = true
+# Include the generated changelog in the GitHub release body.
+git_release_body = "{{ changelog }}"
+# Enable cargo-semver-checks to detect API-breaking changes automatically.
+semver_check = true
