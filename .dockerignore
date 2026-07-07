@@ -1,8 +1,13 @@
 target/
+debug/
+release/
 Dockerfile*
 .dockerignore
 .git
 .gitignore
+.env*
+*.log*
+coverage/
 .specify/
 .opencode/
 node_modules/

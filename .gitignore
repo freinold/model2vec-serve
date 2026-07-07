@@ -216,3 +216,38 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- Rust / model2vec-serve ---
+# Build artifacts
+target/
+debug/
+release/
+*.rs.bk
+*.rlib
+*.rmeta
+*.prof*
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs and environment
+*.log
+.env*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Docker / Helm
+*.tgz
+
+# VitePress documentation
+docs/node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/

@@ -4,3 +4,7 @@
 *.tgz
 *.lock
 charts/
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
