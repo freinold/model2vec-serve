@@ -196,7 +196,7 @@ description: "Task list template for feature implementation"
 - [x] T050 Performance benchmark for embeddings endpoint in `benches/embeddings.rs`
 - [x] T051 [P] Additional unit tests for config and validation in `tests/unit/`
 - [x] T052 Security review of secret handling and input validation
-- [ ] T053 Run `quickstart.md` validation scenarios
+- [x] T053 Run `quickstart.md` validation scenarios
 - [x] T054 Build and smoke-test container image
 
 ---
