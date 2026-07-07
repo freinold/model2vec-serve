@@ -1,0 +1,139 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":gitSignOff",
+    ":rebaseStalePrs",
+    ":pinDigests"
+  ],
+  "timezone": "UTC",
+  "schedule": [
+    "before 9am on monday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "automergeType": "pr",
+    "platformAutomerge": true
+  },
+  "packageRules": [
+    {
+      "description": "Auto-merge patch and minor updates when tests pass",
+      "matchUpdateTypes": [
+        "patch",
+        "minor",
+        "pin",
+        "digest",
+        "lockFileMaintenance"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
+      "labels": [
+        "dependencies",
+        "automerge"
+      ]
+    },
+    {
+      "description": "Require review for major updates",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false,
+      "labels": [
+        "dependencies",
+        "needs-review"
+      ]
+    },
+    {
+      "description": "Group Rust Cargo updates",
+      "matchManagers": [
+        "cargo"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
+      "groupName": "Rust dependencies",
+      "groupSlug": "rust-dependencies"
+    },
+    {
+      "description": "Group Helm chart updates",
+      "matchManagers": [
+        "helm-requirements",
+        "helm-values"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
+      "groupName": "Helm chart dependencies",
+      "groupSlug": "helm-dependencies"
+    },
+    {
+      "description": "Group GitHub Actions updates",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
+      "groupName": "GitHub Actions",
+      "groupSlug": "github-actions"
+    },
+    {
+      "description": "Group Dockerfile base image updates",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
+      "groupName": "Docker base images",
+      "groupSlug": "docker-base-images"
+    },
+    {
+      "description": "Group documentation site npm updates",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchFileNames": [
+        "docs/**"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
+      "groupName": "Docs npm dependencies",
+      "groupSlug": "docs-npm-dependencies"
+    }
+  ],
+  "cargo": {
+    "enabled": true,
+    "rangeStrategy": "update-lockfile"
+  },
+  "helm-requirements": {
+    "enabled": true
+  },
+  "helm-values": {
+    "enabled": true,
+    "managerFilePatterns": [
+      "/(^|/)values\\.ya?ml$/"
+    ]
+  },
+  "github-actions": {
+    "enabled": true
+  },
+  "dockerfile": {
+    "enabled": true
+  },
+  "npm": {
+    "enabled": true
+  }
+}
