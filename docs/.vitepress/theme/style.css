@@ -1,15 +1,94 @@
 /* Custom theme styles for model2vec-serve docs */
+/* Colors are derived from the original Model2Vec logo by MinishLab. */
 
 :root {
-  --vp-c-brand-1: #646cff;
-  --vp-c-brand-2: #747bff;
-  --vp-c-brand-3: #9499ff;
+  /* Brand palette extracted from the Model2Vec logo */
+  --m2v-green: #5BA316;
+  --m2v-green-dark: #3d7f0d;
+  --m2v-green-light: #7ecf2f;
+  --m2v-blue: #8ebbc9;
+  --m2v-blue-light: #a8d2df;
+  --m2v-cork: #c7791f;
+  --m2v-cream: #e6e3d3;
+  --m2v-dark: #0f171a;
+  --m2v-darker: #080d0f;
+
+  /* VitePress brand color mapping */
+  --vp-c-brand-1: var(--m2v-green);
+  --vp-c-brand-2: var(--m2v-green-light);
+  --vp-c-brand-3: var(--m2v-green-dark);
+
+  /* Dark mode (default) background and text */
+  --vp-c-bg: var(--m2v-dark);
+  --vp-c-bg-alt: var(--m2v-darker);
+  --vp-c-bg-elv: #18262b;
+  --vp-c-bg-soft: #1a2a30;
+
+  --vp-c-text-1: var(--m2v-cream);
+  --vp-c-text-2: #b8c5c9;
+  --vp-c-text-3: #8a9aa0;
+
+  /* Accent colors */
+  --vp-c-indigo-1: var(--m2v-blue);
+  --vp-c-indigo-2: var(--m2v-blue-light);
+  --vp-c-indigo-3: var(--m2v-blue);
+
+  --vp-c-green-1: var(--m2v-green);
+  --vp-c-green-2: var(--m2v-green-light);
+  --vp-c-green-3: var(--m2v-green-dark);
+
+  --vp-c-warning-1: var(--m2v-cork);
+  --vp-c-warning-2: #e08f2a;
+  --vp-c-warning-3: #a66518;
+
+  /* Hero */
   --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: -webkit-linear-gradient(120deg, #bd34fe 30%, #41d1ff);
-  --vp-home-hero-image-background-image: linear-gradient(-45deg, #bd34fe 50%, #47caff 50%);
-  --vp-home-hero-image-filter: blur(44px);
+  --vp-home-hero-name-background: linear-gradient(120deg, var(--m2v-green) 30%, var(--m2v-blue));
+  --vp-home-hero-image-background-image: linear-gradient(-45deg, var(--m2v-green) 50%, var(--m2v-blue) 50%);
+  --vp-home-hero-image-filter: blur(60px);
+}
+
+/* Light mode overrides */
+:root:not(.dark) {
+  --vp-c-bg: #f8f6ef;
+  --vp-c-bg-alt: #edece4;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-bg-soft: #f0efe8;
+
+  --vp-c-text-1: #0f171a;
+  --vp-c-text-2: #2c3a3f;
+  --vp-c-text-3: #5a6a70;
+
+  --vp-home-hero-image-background-image: linear-gradient(-45deg, var(--m2v-green-light) 50%, var(--m2v-blue-light) 50%);
+}
+
+/* Hero image styling */
+.VPHero .VPImage {
+  border-radius: 1.5rem;
+  max-width: 320px;
+  filter: drop-shadow(0 0 24px rgba(91, 169, 22, 0.25));
 }
 
 .VPHero .tagline {
   max-width: 560px;
+  color: var(--vp-c-text-2);
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--vp-c-bg-alt);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--m2v-green-dark);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--m2v-green);
 }

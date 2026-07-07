@@ -5,6 +5,9 @@ hero:
   name: model2vec-serve
   text: Lightweight Embeddings Server
   tagline: Serve static model2vec embedding models through OpenAI- and TEI-compatible endpoints.
+  image:
+    src: /model2vec_logo.png
+    alt: Model2Vec logo
   actions:
     - theme: brand
       text: Get Started
