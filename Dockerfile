@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1.85-slim@sha256:9f841bbe9e7d8e37ceb96ed907265a3a0df7f44e3737d0b100e7907a679acb36 AS builder
+FROM rust:1.97-slim@sha256:466074ef42a9485c726d71017fa629f1954cd5e09b473dcd00467ddc6afdc753 AS builder
 
 RUN apt-get update && apt-get install -y \
     pkg-config \
