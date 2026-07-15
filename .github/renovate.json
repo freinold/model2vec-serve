@@ -5,7 +5,7 @@
     ":dependencyDashboard",
     ":gitSignOff",
     ":rebaseStalePrs",
-    ":pinDigests"
+    "docker:pinDigests"
   ],
   "timezone": "UTC",
   "schedule": [
