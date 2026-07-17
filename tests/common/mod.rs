@@ -3,7 +3,7 @@
 #![allow(dead_code)]
 #![allow(clippy::unused_async)]
 
-use hf_hub::api::sync::Api;
+use hf_hub::HFClientSync;
 use metrics_exporter_prometheus::PrometheusHandle;
 use model2vec_serve::{config::Config, routes::app, state::AppState, telemetry};
 use std::sync::{Arc, OnceLock};
@@ -20,25 +20,23 @@ fn metrics_handle() -> Arc<PrometheusHandle> {
 
 /// Download a small model fixture and return its local directory path.
 pub fn model_dir() -> String {
-    let api = Api::new().expect("hf-hub API init failed");
-    let repo = api.model(TEST_MODEL.to_owned());
+    let client = HFClientSync::new().expect("hf-hub API init failed");
+    let (namespace, repo) = TEST_MODEL
+        .split_once('/')
+        .expect("TEST_MODEL must be in namespace/repo format");
 
-    // Ensure the three required files are present in the cache.
-    let config = repo
-        .get("config.json")
-        .expect("failed to fetch config.json");
-    let _tokenizer = repo
-        .get("tokenizer.json")
-        .expect("failed to fetch tokenizer.json");
-    let _model = repo
-        .get("model.safetensors")
-        .expect("failed to fetch model.safetensors");
+    let snapshot_dir = client
+        .model(namespace, repo)
+        .snapshot_download()
+        .allow_patterns(vec![
+            "config.json".to_string(),
+            "tokenizer.json".to_string(),
+            "model.safetensors".to_string(),
+        ])
+        .send()
+        .expect("failed to download model snapshot");
 
-    config
-        .parent()
-        .expect("config.json has no parent directory")
-        .to_string_lossy()
-        .to_string()
+    snapshot_dir.to_string_lossy().to_string()
 }
 
 /// Build a default test configuration pointing at the cached model.
