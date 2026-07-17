@@ -2,20 +2,27 @@
 #![allow(clippy::unwrap_used)]
 
 use criterion::{Criterion, Throughput, criterion_group, criterion_main};
-use hf_hub::api::sync::Api;
+use hf_hub::HFClientSync;
 use model2vec_serve::model::embedding::EmbeddingModel;
 
+const BENCH_MODEL: &str = "minishlab/potion-base-2M";
+
 fn model_dir() -> String {
-    let api = Api::new().expect("hf-hub API init failed");
-    let repo = api.model("minishlab/potion-base-2M".to_owned());
-    let config = repo
-        .get("config.json")
-        .expect("failed to fetch config.json");
-    let _ = repo.get("tokenizer.json");
-    let _ = repo.get("model.safetensors");
-    config
-        .parent()
-        .expect("config.json has no parent")
+    let client = HFClientSync::new().expect("hf-hub API init failed");
+    let (namespace, repo) = BENCH_MODEL
+        .split_once('/')
+        .expect("BENCH_MODEL must be in namespace/repo format");
+
+    client
+        .model(namespace, repo)
+        .snapshot_download()
+        .allow_patterns(vec![
+            "config.json".to_string(),
+            "tokenizer.json".to_string(),
+            "model.safetensors".to_string(),
+        ])
+        .send()
+        .expect("failed to download model snapshot")
         .to_string_lossy()
         .to_string()
 }
