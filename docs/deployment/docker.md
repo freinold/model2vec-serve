@@ -17,7 +17,7 @@ only the compiled binary plus CA certificates.
 
 ```bash
 docker run -p 8080:8080 \
-  -e MODEL=minishlab/potion-base-2M \
+  -e MODEL=minishlab/potion-multilingual-128M \
   model2vec-serve:latest
 ```
 
@@ -25,7 +25,7 @@ docker run -p 8080:8080 \
 
 ```bash
 docker run -p 8080:8080 \
-  -e MODEL=minishlab/potion-base-2M \
+  -e MODEL=minishlab/potion-multilingual-128M \
   -e API_KEY=my-secret-key \
   model2vec-serve:latest
 ```
@@ -36,7 +36,7 @@ Pass them after the image name:
 
 ```bash
 docker run -p 8080:8080 \
-  -e MODEL=minishlab/potion-base-2M \
+  -e MODEL=minishlab/potion-multilingual-128M \
   model2vec-serve:latest \
   --max-batch-size 128 \
   --log-level debug
@@ -78,7 +78,7 @@ semantic version is recommended for reproducible deployments.
 
 ```bash
 docker run -p 8080:8080 \
-  -e MODEL=minishlab/potion-base-2M \
+  -e MODEL=minishlab/potion-multilingual-128M \
   ghcr.io/freinold/model2vec-serve:<version>
 ```
 

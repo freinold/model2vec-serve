@@ -20,7 +20,7 @@ models.
 Run locally with a Hugging Face model id:
 
 ```bash
-cargo run --release -- --model minishlab/potion-base-2M --port 8080
+cargo run --release -- --model minishlab/potion-multilingual-128M --port 8080
 ```
 
 Request embeddings:
@@ -37,7 +37,7 @@ All configuration is passed as command-line arguments:
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--model` | required | Hugging Face model id or local path |
+| `--model` | `minishlab/potion-multilingual-128M` | Hugging Face model id or local path |
 | `--host` | `0.0.0.0` | Bind address |
 | `--port` | `8080` | Listen port |
 | `--api-key` | none | Enables Bearer token authentication |
@@ -52,7 +52,7 @@ All configuration is passed as command-line arguments:
 
 ```bash
 docker build -t model2vec-serve:latest .
-docker run -p 8080:8080 -e MODEL=minishlab/potion-base-2M model2vec-serve:latest
+docker run -p 8080:8080 -e MODEL=minishlab/potion-multilingual-128M model2vec-serve:latest
 ```
 
 ### Pull from GitHub Container Registry
@@ -61,7 +61,7 @@ Released images are published to GHCR:
 
 ```bash
 docker pull ghcr.io/freinold/model2vec-serve:v0.1.0
-docker run -p 8080:8080 -e MODEL=minishlab/potion-base-2M ghcr.io/freinold/model2vec-serve:v0.1.0
+docker run -p 8080:8080 -e MODEL=minishlab/potion-multilingual-128M ghcr.io/freinold/model2vec-serve:v0.1.0
 ```
 
 See [docs/deployment/docker.md](docs/deployment/docker.md) for the full release
@@ -71,7 +71,7 @@ and tagging strategy.
 
 ```bash
 helm install model2vec-serve ./helm/model2vec-serve \
-  --set model=minishlab/potion-base-2M \
+  --set model=minishlab/potion-multilingual-128M \
   --set apiKey=your-secret-key
 ```
 

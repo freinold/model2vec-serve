@@ -21,7 +21,7 @@ POST /v1/embeddings
 ```json
 {
   "input": "Hello world",
-  "model": "minishlab/potion-base-2M",
+  "model": "minishlab/potion-multilingual-128M",
   "encoding_format": "float"
 }
 ```
@@ -52,7 +52,7 @@ POST /v1/embeddings
       "embedding": [0.0123, -0.0456, "..."]
     }
   ],
-  "model": "minishlab/potion-base-2M",
+  "model": "minishlab/potion-multilingual-128M",
   "usage": {
     "prompt_tokens": 2,
     "total_tokens": 2
@@ -96,5 +96,5 @@ See [Errors](./errors.md) for the error body shape.
 ```bash
 curl -X POST http://localhost:8080/v1/embeddings \
   -H "Content-Type: application/json" \
-  -d '{"input":["Hello","World"],"model":"minishlab/potion-base-2M"}'
+  -d '{"input":["Hello","World"],"model":"minishlab/potion-multilingual-128M"}'
 ```

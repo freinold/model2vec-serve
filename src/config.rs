@@ -15,7 +15,11 @@ pub struct Config {
     pub port: u16,
 
     /// Hugging Face model id or local path to a model2vec model directory.
-    #[arg(long, env = "MODEL")]
+    #[arg(
+        long,
+        default_value = "minishlab/potion-multilingual-128M",
+        env = "MODEL"
+    )]
     pub model: String,
 
     /// Optional API key. When set, embedding endpoints require a Bearer token.

@@ -86,7 +86,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo bench
 
 # Run the service locally
-cargo run --release -- --model minishlab/potion-base-2M --port 8080
+cargo run --release -- --model minishlab/potion-multilingual-128M --port 8080
 ```
 
 ## Code Conventions
@@ -184,7 +184,7 @@ VitePress docs in `docs/` when endpoint behavior changes.
 - Multi-stage build: `rust:1.85-slim` builder → `debian:bookworm-slim` runtime.
 - Final image exposes port `8080` and runs `model2vec-serve`.
 - Build: `docker build -t model2vec-serve:latest .`
-- Run: `docker run -p 8080:8080 -e MODEL=minishlab/potion-base-2M model2vec-serve:latest`
+- Run: `docker run -p 8080:8080 -e MODEL=minishlab/potion-multilingual-128M model2vec-serve:latest`
 
 ### Helm
 

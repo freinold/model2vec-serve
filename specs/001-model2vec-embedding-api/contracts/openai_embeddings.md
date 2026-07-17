@@ -15,7 +15,7 @@
 ```json
 {
   "input": "Hello world",
-  "model": "minishlab/potion-base-32M",
+  "model": "minishlab/potion-multilingual-128M",
   "encoding_format": "float"
 }
 ```
@@ -41,7 +41,7 @@
       "embedding": [0.0123, -0.0456, ...]
     }
   ],
-  "model": "minishlab/potion-base-32M",
+  "model": "minishlab/potion-multilingual-128M",
   "usage": {
     "prompt_tokens": 2,
     "total_tokens": 2

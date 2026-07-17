@@ -23,6 +23,16 @@ version 0.2.1) for static embedding inference.
   can build or run with `--no-default-features --features onig,local-only` to
   avoid network dependencies.
 
+**Hugging Face Hub integration**:
+- At runtime, the service loads models through `model2vec-rs` with its default
+  `hf-hub` feature flag enabled. The crate handles all direct Hugging Face Hub
+  downloads, so the application code does not depend on `hf-hub` directly.
+- The test suite and benchmarks use `hf-hub` as a direct `dev-dependency` to
+  download small model snapshots for fixtures and performance measurements.
+- This direct test/benchmark usage follows the `hf-hub` v1.x API: create a
+  blocking `HFClientSync`, call `snapshot_download()` on a `model()` builder, and
+  execute the request with `.send()`.
+
 **Alternatives considered**:
 - `model2vec` (Swiftosis) — unofficial port with a similar API but fewer
   downloads and no official maintenance.
