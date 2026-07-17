@@ -6,7 +6,7 @@ Deploys the model2vec-serve OpenAI/TEI compatible embeddings server on Kubernete
 
 ```bash
 helm install model2vec-serve ./helm/model2vec-serve \
-  --set model=minishlab/potion-base-2M \
+  --set model=minishlab/potion-multilingual-128M \
   --set apiKey=your-secret-key
 ```
 
@@ -17,7 +17,7 @@ helm install model2vec-serve ./helm/model2vec-serve \
 | `replicaCount` | Number of replicas | `1` |
 | `image.repository` | Container image repository | `model2vec-serve` |
 | `image.tag` | Container image tag | `0.1.0` |
-| `model` | Hugging Face model id or local path | `minishlab/potion-base-2M` |
+| `model` | Hugging Face model id or local path | `minishlab/potion-multilingual-128M` |
 | `apiKey` | API key for authentication | `""` |
 | `args` | Extra CLI arguments | `[]` |
 | `resources` | CPU/memory requests and limits | see `values.yaml` |

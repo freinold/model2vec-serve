@@ -43,7 +43,7 @@ Returns metadata about the loaded model.
 
 ```json
 {
-  "model_id": "minishlab/potion-base-32M",
+  "model_id": "minishlab/potion-multilingual-128M",
   "max_input_length": 512,
   "embedding_dimension": 384,
   "pooling": "mean"

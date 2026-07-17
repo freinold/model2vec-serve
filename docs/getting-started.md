@@ -6,7 +6,7 @@ endpoints, and validating the container and Helm chart.
 ## Prerequisites
 
 - Rust toolchain (stable, 1.85+)
-- A model2vec model identifier (e.g. `minishlab/potion-base-2M`) or a local model
+- A model2vec model identifier (e.g. `minishlab/potion-multilingual-128M`) or a local model
   directory
 - Docker (for container validation)
 - Helm 3+ and a Kubernetes cluster or local environment such as kind/minikube
@@ -17,13 +17,13 @@ endpoints, and validating the container and Helm chart.
 Start the server with a Hugging Face model id:
 
 ```bash
-cargo run --release -- --model minishlab/potion-base-2M --port 8080
+cargo run --release -- --model minishlab/potion-multilingual-128M --port 8080
 ```
 
 You can also set values via environment variables:
 
 ```bash
-MODEL=minishlab/potion-base-2M PORT=8080 cargo run --release
+MODEL=minishlab/potion-multilingual-128M PORT=8080 cargo run --release
 ```
 
 ## Verify health
@@ -64,7 +64,7 @@ Expected response shape:
       "embedding": [0.0123, -0.0456, "..."]
     }
   ],
-  "model": "minishlab/potion-base-2M",
+  "model": "minishlab/potion-multilingual-128M",
   "usage": {
     "prompt_tokens": 2,
     "total_tokens": 2
@@ -100,7 +100,7 @@ histograms.
 Start the service with a key:
 
 ```bash
-cargo run --release -- --model minishlab/potion-base-2M --api-key secret-key
+cargo run --release -- --model minishlab/potion-multilingual-128M --api-key secret-key
 ```
 
 An unauthenticated request is rejected:
@@ -134,7 +134,7 @@ Run it:
 
 ```bash
 docker run -p 8080:8080 \
-  -e MODEL=minishlab/potion-base-2M \
+  -e MODEL=minishlab/potion-multilingual-128M \
   model2vec-serve:latest
 ```
 
@@ -146,7 +146,7 @@ Install the chart:
 
 ```bash
 helm install model2vec-serve ./helm/model2vec-serve \
-  --set model=minishlab/potion-base-2M \
+  --set model=minishlab/potion-multilingual-128M \
   --set apiKey=secret-key \
   --set replicaCount=2
 ```
