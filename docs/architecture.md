@@ -7,7 +7,7 @@ made, and how the pieces fit together.
 
 The project aims to be a small, self-contained embeddings server:
 
-1. Load a static model2vec model once at startup.
+1. Load one or more static model2vec models once at startup.
 2. Expose OpenAI- and TEI-compatible HTTP endpoints.
 3. Remain observable and operable with minimal configuration.
 4. Package cleanly as a container and Helm chart.
@@ -63,19 +63,19 @@ main.rs
   ├── Config::parse()          # CLI / env configuration
   ├── telemetry::init_tracing  # JSON logging
   ├── telemetry::init_metrics  # Prometheus recorder
-  ├── AppState::new            # load model2vec model
+  ├── AppState::new            # load model2vec models into ModelRegistry
   └── axum::serve              # bind TCP and serve requests
 ```
 
-The model is loaded synchronously at startup. If loading fails, the process
-exits. Once `AppState` is ready, all request handlers share it through an
-`Arc<AppState>`.
+Models are loaded concurrently at startup. If no configured model can be loaded,
+the process exits. Once `AppState` is ready, all request handlers share it
+through an `Arc<AppState>`.
 
 ## Router composition
 
 `src/routes/mod.rs` builds the axum router:
 
-1. Create a router for `/v1/embeddings`, `/embed`, and `/info`.
+1. Create a router for `/v1/embeddings`, `/v1/models`, `/embed`, and `/info`.
 2. If `api_key` is configured, wrap those routes in the Bearer-token auth layer.
 3. Add public `/health`, `/ready`, and `/metrics` routes.
 4. Mount the Scalar OpenAPI UI at `/docs`.
@@ -94,10 +94,11 @@ endpoints remain public.
 
 1. Middleware extracts or generates a request ID.
 2. The request is routed to the appropriate handler.
-3. The handler validates input, calls `state.model.encode(...)`, and builds the
+3. The handler validates input, resolves the requested model from
+   `state.registry`, calls `loaded_model.model.encode(...)`, and builds the
    response.
-4. Telemetry middleware records method, path, status, and latency to Prometheus
-   counters/histograms.
+4. Telemetry middleware records method, path, status, model, and latency to
+   Prometheus counters/histograms.
 5. The response is returned with the `x-request-id` header attached.
 
 ## Error handling
@@ -121,14 +122,16 @@ paths, secrets, or stack traces.
 - **Docker**: multi-stage build from `rust:1.85-slim` to
   `debian:bookworm-slim`. The final image is small, exposes port `8080`, and
   runs `model2vec-serve` as the entry point.
-- **Helm**: chart under `helm/model2vec-serve/` with `values.yaml` for model
-  source, API key, resources, autoscaling, and volume mounts. Volume-mounted
-  local models are supported through `extraVolumes` and `extraVolumeMounts`.
+- **Helm**: chart under `helm/model2vec-serve/` with `values.yaml` for a list
+  of models, default model, API key, resources, autoscaling, and volume mounts.
+  Volume-mounted local models are supported through `extraVolumes` and
+  `extraVolumeMounts`.
 
 ## Design decisions
 
 Key architecture decisions are recorded in
-`specs/001-model2vec-embedding-api/research.md`, including the rationale for:
+`specs/001-model2vec-embedding-api/research.md` and
+`specs/003-multi-model-serving/research.md`, including the rationale for:
 
 - choosing `model2vec-rs` over candle, ONNX Runtime, or shelling out to Python;
 - choosing axum + utoipa;

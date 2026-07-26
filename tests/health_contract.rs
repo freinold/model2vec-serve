@@ -35,6 +35,18 @@ async fn health_returns_healthy_status() {
 
     assert_eq!(value["status"], "healthy");
     assert_eq!(value["ready"], true);
+
+    let models = value["models"]
+        .as_array()
+        .expect("models should be an array");
+    assert!(
+        !models.is_empty(),
+        "health response should include at least one model status"
+    );
+    let first = &models[0];
+    assert!(first["model_id"].is_string());
+    assert_eq!(first["status"], "ready");
+    assert_eq!(first["message"], "model loaded");
 }
 
 #[tokio::test]

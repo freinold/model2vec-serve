@@ -4,9 +4,18 @@ use crate::{
     errors::AppError,
     routes::dto::{ErrorResponse, ModelInfo, TeiEmbedRequest},
     state::AppState,
+    telemetry::RequestModelId,
 };
-use axum::{Json, extract::State};
+use axum::{Extension, Json, extract::Query, extract::State};
+use serde::Deserialize;
 use std::sync::Arc;
+
+/// Optional model selector for TEI-compatible endpoints.
+#[derive(Debug, Deserialize, Default)]
+pub struct TeiModelQuery {
+    /// Model identifier to use. If omitted, the configured default model is used.
+    model: Option<String>,
+}
 
 /// TEI-compatible embed endpoint.
 ///
@@ -29,6 +38,8 @@ use std::sync::Arc;
 )]
 pub async fn tei_embed(
     State(state): State<Arc<AppState>>,
+    Extension(model_id_ext): Extension<RequestModelId>,
+    Query(query): Query<TeiModelQuery>,
     Json(request): Json<TeiEmbedRequest>,
 ) -> Result<Json<Vec<Vec<f32>>>, AppError> {
     if request.inputs.is_empty() {
@@ -42,29 +53,41 @@ pub async fn tei_embed(
         )));
     }
 
+    let loaded = state.registry.resolve(query.model.as_deref())?;
     let inputs = request.inputs.as_strings();
-    let embeddings = state
+    let embeddings = loaded
         .model
-        .encode(&inputs, state.config.max_input_length, inputs.len());
+        .encode(&inputs, loaded.max_input_length, inputs.len());
+
+    model_id_ext.set(loaded.model_id.clone());
 
     Ok(Json(embeddings))
 }
 
 /// TEI-compatible model information endpoint.
+///
+/// # Errors
+///
+/// Returns `AppError::ModelNotFound` when the requested model is not loaded.
 #[utoipa::path(
     get,
     path = "/info",
     tag = "tei",
     responses(
         (status = 200, description = "Model information", body = ModelInfo),
+        (status = 400, description = "Invalid model", body = ErrorResponse),
         (status = 500, description = "Internal error", body = ErrorResponse)
     )
 )]
-pub async fn tei_info(State(state): State<Arc<AppState>>) -> Json<ModelInfo> {
-    Json(ModelInfo {
-        model_id: state.model_id.clone(),
-        max_input_length: state.config.max_input_length,
-        embedding_dimension: state.embedding_dimension,
-        pooling: "mean",
-    })
+pub async fn tei_info(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<TeiModelQuery>,
+) -> Result<Json<ModelInfo>, AppError> {
+    let loaded = state.registry.resolve(query.model.as_deref())?;
+    Ok(Json(ModelInfo {
+        model_id: loaded.model_id.clone(),
+        max_input_length: loaded.max_input_length,
+        embedding_dimension: loaded.embedding_dimension,
+        pooling: loaded.pooling,
+    }))
 }

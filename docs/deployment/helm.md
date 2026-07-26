@@ -18,6 +18,19 @@ helm upgrade model2vec-serve ./helm/model2vec-serve \
   --set model=minishlab/potion-multilingual-128M
 ```
 
+## Multi-model install
+
+Load more than one model and choose which one is used when the request does
+not specify a model:
+
+```bash
+helm install model2vec-serve ./helm/model2vec-serve \
+  --set models[0]=minishlab/potion-base-2M \
+  --set models[1]=minishlab/potion-multilingual-128M \
+  --set defaultModel=minishlab/potion-base-2M \
+  --set apiKey=your-secret-key
+```
+
 ## Uninstall
 
 ```bash
@@ -32,7 +45,9 @@ helm uninstall model2vec-serve
 | `image.repository` | Container image repository | `model2vec-serve` |
 | `image.tag` | Container image tag | `0.1.0` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
-| `model` | Hugging Face model id or local path | `minishlab/potion-multilingual-128M` |
+| `models` | List of Hugging Face model ids or local paths | `[]` |
+| `defaultModel` | Default model when a request does not specify one (defaults to the first model in the list if omitted) | `""` |
+| `model` | (Deprecated) Hugging Face model id or local path | `minishlab/potion-multilingual-128M` |
 | `apiKey` | API key for authentication | `""` |
 | `args` | Extra CLI arguments | `[]` |
 | `env` | Extra environment variables | `[]` |

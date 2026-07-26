@@ -6,7 +6,7 @@ models.
 
 ## Features
 
-- OpenAI-compatible `POST /v1/embeddings`
+- OpenAI-compatible `POST /v1/embeddings` and `GET /v1/models`
 - TEI-compatible `POST /embed` and `GET /info`
 - Optional API key authentication
 - Health (`/health`, `/ready`) and metrics (`/metrics`) endpoints
@@ -31,13 +31,32 @@ curl -X POST http://localhost:8080/v1/embeddings \
   -d '{"input":"Hello world"}'
 ```
 
+Serve multiple models in one process:
+
+```bash
+cargo run --release -- \
+  --model minishlab/potion-multilingual-128M \
+  --model minishlab/potion-code-16M-v2 \
+  --default-model minishlab/potion-multilingual-128M \
+  --port 8080
+```
+
+Select a model in the request:
+
+```bash
+curl -X POST http://localhost:8080/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{"input":"def hello(): pass","model":"minishlab/potion-code-16M-v2"}'
+```
+
 ## Configuration
 
 All configuration is passed as command-line arguments:
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--model` | `minishlab/potion-multilingual-128M` | Hugging Face model id or local path |
+| `--model` | `minishlab/potion-multilingual-128M` | Hugging Face model id or local path; repeatable |
+| `--default-model` | first `--model` | Model to use when a request does not specify one |
 | `--host` | `0.0.0.0` | Bind address |
 | `--port` | `8080` | Listen port |
 | `--api-key` | none | Enables Bearer token authentication |
@@ -53,6 +72,15 @@ All configuration is passed as command-line arguments:
 ```bash
 docker build -t model2vec-serve:latest .
 docker run -p 8080:8080 -e MODEL=minishlab/potion-multilingual-128M model2vec-serve:latest
+```
+
+Serve multiple models via comma-separated `MODEL`:
+
+```bash
+docker run -p 8080:8080 \
+  -e MODEL=minishlab/potion-multilingual-128M,minishlab/potion-code-16M-v2 \
+  -e DEFAULT_MODEL=minishlab/potion-multilingual-128M \
+  model2vec-serve:latest
 ```
 
 ### Pull from GitHub Container Registry
@@ -72,6 +100,15 @@ and tagging strategy.
 ```bash
 helm install model2vec-serve ./helm/model2vec-serve \
   --set model=minishlab/potion-multilingual-128M \
+  --set apiKey=your-secret-key
+```
+
+Install with multiple models:
+
+```bash
+helm install model2vec-serve ./helm/model2vec-serve \
+  --set models={minishlab/potion-multilingual-128M,minishlab/potion-code-16M-v2} \
+  --set defaultModel=minishlab/potion-multilingual-128M \
   --set apiKey=your-secret-key
 ```
 

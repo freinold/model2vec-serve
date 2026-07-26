@@ -11,9 +11,12 @@ use crate::{
     routes::{
         dto::{
             EmbeddingObject, EmbeddingRequest, EmbeddingResponse, EmbeddingVector, ErrorResponse,
-            HealthStatus, ModelInfo, TeiEmbedRequest, Usage,
+            HealthModelStatus, HealthStatus, ModelInfo, ModelsListResponse, OpenAiModelInfo,
+            TeiEmbedRequest, Usage,
         },
-        embeddings::{__path_create_embeddings, create_embeddings},
+        embeddings::{
+            __path_create_embeddings, __path_list_models, create_embeddings, list_models,
+        },
         health::{__path_health, __path_ready, health, ready},
         metrics::{__path_metrics, metrics},
         tei::{__path_tei_embed, __path_tei_info, tei_embed, tei_info},
@@ -42,7 +45,15 @@ use utoipa_scalar::{Scalar, Servable};
         version = "0.1.0",
         description = "OpenAI and TEI compatible embeddings server"
     ),
-    paths(create_embeddings, tei_embed, tei_info, health, ready, metrics),
+    paths(
+        create_embeddings,
+        list_models,
+        tei_embed,
+        tei_info,
+        health,
+        ready,
+        metrics
+    ),
     components(schemas(
         EmbeddingRequest,
         EmbeddingObject,
@@ -52,6 +63,9 @@ use utoipa_scalar::{Scalar, Servable};
         ErrorResponse,
         TeiEmbedRequest,
         ModelInfo,
+        OpenAiModelInfo,
+        ModelsListResponse,
+        HealthModelStatus,
         HealthStatus
     ))
 )]
@@ -61,6 +75,7 @@ pub struct ApiDoc;
 pub fn app(state: Arc<AppState>) -> Router {
     let api = Router::new()
         .route("/v1/embeddings", post(create_embeddings))
+        .route("/v1/models", get(list_models))
         .route("/embed", post(tei_embed))
         .route("/info", get(tei_info));
 

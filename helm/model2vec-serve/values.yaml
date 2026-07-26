@@ -6,7 +6,17 @@ image:
   pullPolicy: IfNotPresent
   tag: ""
 
-# Hugging Face model id or local path mounted into the container.
+# List of Hugging Face model ids or local paths to load.
+# When set, this takes precedence over the deprecated `model` value.
+models: []
+
+# Default model to use when a request does not specify one.
+# When multiple models are configured, this defaults to the first model in the
+# list if omitted.
+defaultModel: ""
+
+# (Deprecated) Single Hugging Face model id or local path.
+# Use `models` and `defaultModel` instead.
 model: "minishlab/potion-multilingual-128M"
 
 # Optional API key. Leave empty to disable authentication.

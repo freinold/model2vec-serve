@@ -16,6 +16,7 @@ All error responses share a single JSON body shape.
 | HTTP Status | `error` code | Meaning |
 |-------------|--------------|---------|
 | `400` | `invalid_request` | Request body or parameters are invalid |
+| `400` | `model_not_found` | Requested model is not loaded |
 | `401` | `unauthorized` | API key missing, malformed, or incorrect |
 | `403` | `forbidden` | API key valid but request not permitted |
 | `404` | `not_found` | Requested endpoint does not exist |

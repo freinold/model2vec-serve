@@ -7,6 +7,7 @@ use axum::{
     response::Response,
 };
 use metrics_exporter_prometheus::PrometheusBuilder;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tracing::{Instrument, info_span};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
@@ -45,12 +46,57 @@ fn request_id(headers: &HeaderMap) -> String {
         )
 }
 
+/// Per-request model identifier passed through request extensions.
+///
+/// Embedding handlers set the resolved model id; the request tracing
+/// middleware reads it when recording Prometheus metrics. Other endpoints
+/// leave it unset, resulting in the `none` label value.
+#[derive(Clone, Debug)]
+pub struct RequestModelId {
+    inner: Arc<Mutex<Option<String>>>,
+}
+
+impl RequestModelId {
+    /// Create a new empty model identifier holder.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    /// Store the resolved model identifier.
+    pub fn set(&self, model_id: String) {
+        *self
+            .inner
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(model_id);
+    }
+
+    fn get(&self) -> Option<String> {
+        self.inner
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+    }
+}
+
+impl Default for RequestModelId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Tower/axum middleware that adds a request id, logs requests, and records metrics.
 pub async fn request_tracing_middleware(request: Request, next: Next) -> Response {
     let start = Instant::now();
     let id = request_id(request.headers());
     let method = request.method().to_string();
     let path = request.uri().path().to_string();
+
+    let model_id = RequestModelId::new();
+    let mut request = request;
+    request.extensions_mut().insert(model_id.clone());
 
     let span = info_span!(
         "http_request",
@@ -63,18 +109,21 @@ pub async fn request_tracing_middleware(request: Request, next: Next) -> Respons
 
     let latency = start.elapsed().as_secs_f64();
     let status = response.status().as_u16();
+    let model_label = model_id.get().unwrap_or_else(|| "none".to_string());
 
     metrics::counter!(
         "http_requests_total",
         "method" => method.clone(),
         "path" => path.clone(),
         "status" => status.to_string(),
+        "model" => model_label.clone(),
     )
     .increment(1);
     metrics::histogram!(
         "http_request_duration_seconds",
         "method" => method,
         "path" => path,
+        "model" => model_label,
     )
     .record(latency);
 

@@ -26,6 +26,16 @@ You can also set values via environment variables:
 MODEL=minishlab/potion-multilingual-128M PORT=8080 cargo run --release
 ```
 
+Serve multiple models in one process:
+
+```bash
+cargo run --release -- \
+  --model minishlab/potion-multilingual-128M \
+  --model minishlab/potion-code-16M-v2 \
+  --default-model minishlab/potion-multilingual-128M \
+  --port 8080
+```
+
 ## Verify health
 
 ```bash
@@ -38,7 +48,14 @@ Expected response:
 {
   "status": "healthy",
   "ready": true,
-  "message": "model loaded and serving requests"
+  "message": "1 model(s) ready",
+  "models": [
+    {
+      "model_id": "minishlab/potion-multilingual-128M",
+      "status": "ready",
+      "message": "model loaded"
+    }
+  ]
 }
 ```
 
@@ -50,6 +67,14 @@ Expected response:
 curl -X POST http://localhost:8080/v1/embeddings \
   -H "Content-Type: application/json" \
   -d '{"input":"Hello world"}'
+```
+
+With multiple models loaded, select a model explicitly:
+
+```bash
+curl -X POST http://localhost:8080/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{"input":"def hello(): pass","model":"minishlab/potion-code-16M-v2"}'
 ```
 
 Expected response shape:
@@ -138,6 +163,15 @@ docker run -p 8080:8080 \
   model2vec-serve:latest
 ```
 
+Serve multiple models:
+
+```bash
+docker run -p 8080:8080 \
+  -e MODEL=minishlab/potion-multilingual-128M,minishlab/potion-code-16M-v2 \
+  -e DEFAULT_MODEL=minishlab/potion-multilingual-128M \
+  model2vec-serve:latest
+```
+
 Run the same curl checks as in the local section.
 
 ## Deploy with Helm
@@ -147,6 +181,16 @@ Install the chart:
 ```bash
 helm install model2vec-serve ./helm/model2vec-serve \
   --set model=minishlab/potion-multilingual-128M \
+  --set apiKey=secret-key \
+  --set replicaCount=2
+```
+
+Install with multiple models:
+
+```bash
+helm install model2vec-serve ./helm/model2vec-serve \
+  --set models={minishlab/potion-multilingual-128M,minishlab/potion-code-16M-v2} \
+  --set defaultModel=minishlab/potion-multilingual-128M \
   --set apiKey=secret-key \
   --set replicaCount=2
 ```

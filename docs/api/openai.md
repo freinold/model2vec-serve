@@ -78,7 +78,8 @@ same order.
 - `input` must be non-empty.
 - Batch size must not exceed `--max-batch-size`.
 - `encoding_format` must be `"float"` or `"base64"`.
-- If `model` is supplied, it must match the loaded model id.
+- If `model` is supplied, it must match a loaded model id.
+- If `model` is omitted, the configured default model is used.
 
 ## Errors
 
@@ -91,9 +92,35 @@ same order.
 
 See [Errors](./errors.md) for the error body shape.
 
+## `GET /v1/models`
+
+Lists all loaded models in the standard OpenAI model list format.
+
+### Response
+
+**Status**: `200 OK`
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "minishlab/potion-multilingual-128M",
+      "object": "model",
+      "created": 1686935002,
+      "owned_by": "minishlab"
+    }
+  ]
+}
+```
+
 ## Example with curl
 
 ```bash
+# List models
+curl http://localhost:8080/v1/models
+
+# Request embeddings
 curl -X POST http://localhost:8080/v1/embeddings \
   -H "Content-Type: application/json" \
   -d '{"input":["Hello","World"],"model":"minishlab/potion-multilingual-128M"}'

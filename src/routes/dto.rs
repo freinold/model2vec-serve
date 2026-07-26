@@ -131,6 +131,39 @@ pub struct ModelInfo {
     pub pooling: &'static str,
 }
 
+/// OpenAI-compatible model object returned by `/v1/models`.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct OpenAiModelInfo {
+    /// Model identifier.
+    pub id: String,
+    /// Object type, always `model`.
+    pub object: &'static str,
+    /// Unix timestamp in seconds.
+    pub created: i64,
+    /// Model publisher or owner.
+    pub owned_by: &'static str,
+}
+
+/// OpenAI-compatible list response returned by `/v1/models`.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ModelsListResponse {
+    /// Object type, always `list`.
+    pub object: &'static str,
+    /// Available models.
+    pub data: Vec<OpenAiModelInfo>,
+}
+
+/// Per-model status inside the health response.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct HealthModelStatus {
+    /// Model identifier.
+    pub model_id: String,
+    /// Load status: `ready` or `failed`.
+    pub status: &'static str,
+    /// Human-readable description.
+    pub message: String,
+}
+
 /// Health status response.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct HealthStatus {
@@ -140,4 +173,7 @@ pub struct HealthStatus {
     pub ready: bool,
     /// Human-readable description.
     pub message: String,
+    /// Per-model status.
+    #[schema(required = false)]
+    pub models: Vec<HealthModelStatus>,
 }

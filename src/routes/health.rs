@@ -1,7 +1,11 @@
 //! Health and readiness endpoints.
 
-use crate::routes::dto::{ErrorResponse, HealthStatus};
-use axum::Json;
+use crate::{
+    routes::dto::{ErrorResponse, HealthModelStatus, HealthStatus},
+    state::AppState,
+};
+use axum::{Json, extract::State};
+use std::sync::Arc;
 
 /// Health / readiness endpoint.
 #[utoipa::path(
@@ -13,11 +17,29 @@ use axum::Json;
         (status = 503, description = "Service is not ready", body = ErrorResponse)
     )
 )]
-pub async fn health() -> Json<HealthStatus> {
+pub async fn health(State(state): State<Arc<AppState>>) -> Json<HealthStatus> {
+    let models: Vec<HealthModelStatus> = state
+        .registry
+        .model_statuses()
+        .into_iter()
+        .map(|m| HealthModelStatus {
+            model_id: m.model_id,
+            status: m.status,
+            message: m.message,
+        })
+        .collect();
+    let ready = !models.is_empty();
+    let message = if ready {
+        format!("{} model(s) ready", models.len())
+    } else {
+        "no models loaded".to_string()
+    };
+
     Json(HealthStatus {
         status: "healthy",
-        ready: true,
-        message: "model loaded and serving requests".to_string(),
+        ready,
+        message,
+        models,
     })
 }
 
@@ -31,6 +53,6 @@ pub async fn health() -> Json<HealthStatus> {
         (status = 503, description = "Service is not ready", body = ErrorResponse)
     )
 )]
-pub async fn ready() -> Json<HealthStatus> {
-    health().await
+pub async fn ready(State(state): State<Arc<AppState>>) -> Json<HealthStatus> {
+    health(State(state)).await
 }
