@@ -16,7 +16,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1"
 axum = "0.8"
-base64 = "0.22"
+base64 = "0.23"
 clap = { version = "4", features = ["derive", "env"] }
 metrics = "0.24"
 metrics-exporter-prometheus = "0.18"
