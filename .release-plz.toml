@@ -12,5 +12,6 @@ git_release_enable = true
 git_tag_enable = true
 # Include the generated changelog in the GitHub release body.
 git_release_body = "{{ changelog }}"
-# Enable cargo-semver-checks to detect API-breaking changes automatically.
-semver_check = true
+# Disable cargo-semver-checks: this is an unpublished application binary, so
+# there is no crates.io baseline to compare against.
+semver_check = false
