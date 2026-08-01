@@ -57,6 +57,7 @@ All configuration is passed as command-line arguments:
 |----------|---------|-------------|
 | `--model` | `minishlab/potion-multilingual-128M` | Hugging Face model id or local path; repeatable |
 | `--default-model` | first `--model` | Model to use when a request does not specify one |
+| `--model-owner` | `minishlab` | Model publisher or owner shown in `/v1/models` responses |
 | `--host` | `0.0.0.0` | Bind address |
 | `--port` | `8080` | Listen port |
 | `--api-key` | none | Enables Bearer token authentication |

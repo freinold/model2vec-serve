@@ -11,6 +11,7 @@ a corresponding environment variable.
 | `--port` | `PORT` | `8080` | Port to listen on |
 | `--model` | `MODEL` | `minishlab/potion-multilingual-128M` | Hugging Face model id or local path; repeatable |
 | `--default-model` | `DEFAULT_MODEL` | first `--model` | Model to use when a request does not specify one |
+| `--model-owner` | `MODEL_OWNER` | `minishlab` | Model publisher or owner shown in `/v1/models` responses |
 | `--api-key` | `API_KEY` | none | Enables Bearer token authentication |
 | `--max-batch-size` | `MAX_BATCH_SIZE` | `256` | Maximum inputs per request |
 | `--max-input-length` | `MAX_INPUT_LENGTH` | `512` | Maximum tokens per input |

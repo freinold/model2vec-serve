@@ -31,6 +31,7 @@ helm install model2vec-serve ./helm/model2vec-serve \
 | `image.tag` | Container image tag | `0.1.0` |
 | `models` | List of Hugging Face model ids or local paths | `[]` |
 | `defaultModel` | Default model when a request does not specify one (defaults to the first model in the list if omitted) | `""` |
+| `modelOwner` | Model publisher or owner shown in `/v1/models` responses | `"minishlab"` |
 | `model` | (Deprecated) Hugging Face model id or local path | `minishlab/potion-multilingual-128M` |
 | `apiKey` | API key for authentication | `""` |
 | `args` | Extra CLI arguments | `[]` |

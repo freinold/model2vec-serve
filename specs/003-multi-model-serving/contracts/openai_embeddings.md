@@ -53,10 +53,9 @@ The `model` field in the response is the identifier of the model that actually p
 
 ## Errors
 
-- `400 Bad Request` — invalid input format, unsupported encoding, mismatched model, model not found, or requested model is unavailable.
+- `400 Bad Request` — invalid input format, unsupported encoding, mismatched model, or `model_not_found` (requested model is not loaded or unavailable).
 - `401 Unauthorized` — missing or invalid API key.
 - `422 Unprocessable Entity` — malformed JSON.
 - `500 Internal Server Error` — model inference failure.
-- `503 Service Unavailable` — the requested model is not loaded or ready.
 
 See [errors.md](./errors.md) for error body shape.

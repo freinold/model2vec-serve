@@ -38,6 +38,10 @@ spec:
             - --model
             - {{ .Values.model | quote }}
             {{- end }}
+            {{- if .Values.modelOwner }}
+            - --model-owner
+            - {{ .Values.modelOwner | quote }}
+            {{- end }}
             {{- if .Values.apiKey }}
             - --api-key
             - $(API_KEY)

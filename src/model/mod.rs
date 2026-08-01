@@ -55,12 +55,13 @@ fn derive_model_id(model: &str) -> String {
 }
 
 /// Registry of all loaded models available for inference.
-#[derive(Clone)]
 pub struct ModelRegistry {
     /// Loaded models keyed by canonical identifier.
     models: HashMap<String, LoadedModel>,
     /// Identifier to use when a request does not specify a model.
     default_model_id: String,
+    /// Models that failed to load, with their configured path and the error.
+    failed_models: Vec<(String, anyhow::Error)>,
 }
 
 impl ModelRegistry {
@@ -120,25 +121,32 @@ impl ModelRegistry {
             ));
         }
 
+        let default_model_id = match default_model_id {
+            Some(path) => {
+                let id = derive_model_id(&path);
+                if !loaded.iter().any(|m| m.model_id == id) {
+                    return Err(anyhow::anyhow!("default model '{id}' is not loaded"));
+                }
+                id
+            }
+            None => loaded
+                .first()
+                .map(|m| m.model_id.clone())
+                .ok_or_else(|| anyhow::anyhow!("no default model available"))?,
+        };
+
         let mut models = HashMap::with_capacity(loaded.len());
         for model in loaded {
-            models.insert(model.model_id.clone(), model);
-        }
-
-        let default_model_id = default_model_id
-            .or_else(|| model_paths.first().cloned())
-            .map(|path| derive_model_id(&path))
-            .ok_or_else(|| anyhow::anyhow!("no default model available"))?;
-
-        if !models.contains_key(&default_model_id) {
-            return Err(anyhow::anyhow!(
-                "default model '{default_model_id}' is not loaded"
-            ));
+            let model_id = model.model_id.clone();
+            if models.insert(model_id.clone(), model).is_some() {
+                return Err(anyhow::anyhow!("duplicate model identifier '{model_id}'"));
+            }
         }
 
         Ok(Self {
             models,
             default_model_id,
+            failed_models: errors,
         })
     }
 
@@ -175,16 +183,33 @@ impl ModelRegistry {
     }
 
     /// Return per-model status information for health checks.
+    ///
+    /// Includes both successfully loaded models and models that failed to load.
     #[must_use]
     pub fn model_statuses(&self) -> Vec<ModelStatus> {
-        self.models
+        let mut statuses: Vec<ModelStatus> = self
+            .models
             .values()
             .map(|m| ModelStatus {
                 model_id: m.model_id.clone(),
                 status: "ready",
                 message: "model loaded".to_string(),
             })
-            .collect()
+            .collect();
+
+        statuses.extend(self.failed_models.iter().map(|(path, _err)| ModelStatus {
+            model_id: path.clone(),
+            status: "failed",
+            message: "model failed to load".to_string(),
+        }));
+
+        statuses
+    }
+
+    /// Return the number of models that loaded successfully.
+    #[must_use]
+    pub fn loaded_count(&self) -> usize {
+        self.models.len()
     }
 }
 

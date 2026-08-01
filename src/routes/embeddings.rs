@@ -134,6 +134,7 @@ fn validate_request(request: &EmbeddingRequest, state: &AppState) -> Result<(), 
 )]
 pub async fn list_models(State(state): State<Arc<AppState>>) -> Json<ModelsListResponse> {
     const CREATED: i64 = 1_686_935_002;
+    let owner = state.config.model_owner.clone();
     let data = state
         .registry
         .iter()
@@ -141,7 +142,7 @@ pub async fn list_models(State(state): State<Arc<AppState>>) -> Json<ModelsListR
             id: model.model_id.clone(),
             object: "model",
             created: CREATED,
-            owned_by: "minishlab",
+            owned_by: owner.clone(),
         })
         .collect();
 

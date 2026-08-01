@@ -31,6 +31,10 @@ pub struct Config {
     #[arg(long = "default-model", env = "DEFAULT_MODEL")]
     pub default_model: Option<String>,
 
+    /// Model publisher or owner shown in OpenAI-compatible `/v1/models` responses.
+    #[arg(long = "model-owner", env = "MODEL_OWNER", default_value = "minishlab")]
+    pub model_owner: String,
+
     /// Optional API key. When set, embedding endpoints require a Bearer token.
     #[arg(long, env = "API_KEY")]
     pub api_key: Option<String>,

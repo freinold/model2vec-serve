@@ -15,6 +15,9 @@ models: []
 # list if omitted.
 defaultModel: ""
 
+# Model publisher or owner shown in OpenAI-compatible `/v1/models` responses.
+modelOwner: "minishlab"
+
 # (Deprecated) Single Hugging Face model id or local path.
 # Use `models` and `defaultModel` instead.
 model: "minishlab/potion-multilingual-128M"

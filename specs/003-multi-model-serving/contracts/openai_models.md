@@ -43,7 +43,7 @@
   - `id` (string) — model identifier.
   - `object` (string) — always `"model"`.
   - `created` (integer) — Unix timestamp in seconds.
-  - `owned_by` (string) — model publisher or configured owner.
+  - `owned_by` (string) — model publisher or owner, configured via `--model-owner` / `MODEL_OWNER` (default `minishlab`).
 
 ## Errors
 

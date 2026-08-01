@@ -30,11 +30,14 @@ OUTPUT=$(render \
   --set "models[0]=minishlab/potion-base-2M" \
   --set "models[1]=minishlab/potion-multilingual-128M" \
   --set defaultModel=minishlab/potion-base-2M \
+  --set modelOwner=acme \
   --set apiKey=secret)
 echo "$OUTPUT" | grep -q "kind: Secret"
 [ "$(echo "$OUTPUT" | grep -cE -- '- --model$')" -eq 2 ]
 echo "$OUTPUT" | grep -q 'minishlab/potion-base-2M'
 echo "$OUTPUT" | grep -q 'minishlab/potion-multilingual-128M'
 echo "$OUTPUT" | grep -q -- '- --default-model$'
+echo "$OUTPUT" | grep -q -- '- --model-owner$'
+echo "$OUTPUT" | grep -q 'acme'
 
 echo "Helm chart validation passed."

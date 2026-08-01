@@ -18,6 +18,7 @@ fn default_values_are_reasonable() {
         port: 8080,
         models: vec![DEFAULT_MODEL.to_string()],
         default_model: None,
+        model_owner: "minishlab".to_string(),
         api_key: None,
         max_batch_size: 256,
         max_input_length: 512,

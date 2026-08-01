@@ -119,7 +119,8 @@ cargo run --release -- \
 
 ### Startup flow
 
-1. `main.rs` parses `Config` from CLI args / environment variables via `clap`.
+1. `main.rs` parses `Config` from CLI args / environment variables via `clap`
+   (including `--model-owner` / `MODEL_OWNER` for `/v1/models` responses).
 2. `telemetry::init_tracing` configures JSON logging.
 3. `telemetry::init_metrics` installs the Prometheus recorder.
 4. `AppState::new` loads all configured model2vec models from Hugging Face Hub

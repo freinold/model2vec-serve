@@ -4,7 +4,7 @@ use crate::{
     routes::dto::{ErrorResponse, HealthModelStatus, HealthStatus},
     state::AppState,
 };
-use axum::{Json, extract::State};
+use axum::{Json, extract::State, http::StatusCode};
 use std::sync::Arc;
 
 /// Health / readiness endpoint.
@@ -17,7 +17,7 @@ use std::sync::Arc;
         (status = 503, description = "Service is not ready", body = ErrorResponse)
     )
 )]
-pub async fn health(State(state): State<Arc<AppState>>) -> Json<HealthStatus> {
+pub async fn health(State(state): State<Arc<AppState>>) -> (StatusCode, Json<HealthStatus>) {
     let models: Vec<HealthModelStatus> = state
         .registry
         .model_statuses()
@@ -28,19 +28,28 @@ pub async fn health(State(state): State<Arc<AppState>>) -> Json<HealthStatus> {
             message: m.message,
         })
         .collect();
-    let ready = !models.is_empty();
+    let ready = state.registry.loaded_count() > 0;
+    let status_code = if ready {
+        StatusCode::OK
+    } else {
+        StatusCode::SERVICE_UNAVAILABLE
+    };
+    let status = if ready { "healthy" } else { "unhealthy" };
     let message = if ready {
-        format!("{} model(s) ready", models.len())
+        format!("{} model(s) ready", state.registry.loaded_count())
     } else {
         "no models loaded".to_string()
     };
 
-    Json(HealthStatus {
-        status: "healthy",
-        ready,
-        message,
-        models,
-    })
+    (
+        status_code,
+        Json(HealthStatus {
+            status,
+            ready,
+            message,
+            models,
+        }),
+    )
 }
 
 /// Readiness alias for Kubernetes probes.
@@ -53,6 +62,6 @@ pub async fn health(State(state): State<Arc<AppState>>) -> Json<HealthStatus> {
         (status = 503, description = "Service is not ready", body = ErrorResponse)
     )
 )]
-pub async fn ready(State(state): State<Arc<AppState>>) -> Json<HealthStatus> {
+pub async fn ready(State(state): State<Arc<AppState>>) -> (StatusCode, Json<HealthStatus>) {
     health(State(state)).await
 }

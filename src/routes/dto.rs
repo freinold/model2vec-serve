@@ -141,7 +141,7 @@ pub struct OpenAiModelInfo {
     /// Unix timestamp in seconds.
     pub created: i64,
     /// Model publisher or owner.
-    pub owned_by: &'static str,
+    pub owned_by: String,
 }
 
 /// OpenAI-compatible list response returned by `/v1/models`.
