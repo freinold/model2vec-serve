@@ -34,7 +34,8 @@ fn metrics_handle() -> Arc<PrometheusHandle> {
 async fn default_model_loads_and_embeds_non_english_input() {
     let config = Config::parse_from(Vec::<&str>::new());
     assert_eq!(
-        config.model, "minishlab/potion-multilingual-128M",
+        config.models,
+        vec!["minishlab/potion-multilingual-128M"],
         "default model should be the multilingual model"
     );
 

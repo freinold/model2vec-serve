@@ -15,7 +15,14 @@ Returns the overall health of the service.
 {
   "status": "healthy",
   "ready": true,
-  "message": "model loaded and serving requests"
+  "message": "2 model(s) ready",
+  "models": [
+    {
+      "model_id": "minishlab/potion-multilingual-128M",
+      "status": "ready",
+      "message": "model loaded"
+    }
+  ]
 }
 ```
 
@@ -26,6 +33,7 @@ Returns the overall health of the service.
 | `status` | `string` | `"healthy"` or `"unhealthy"` |
 | `ready` | `boolean` | Whether the service can serve requests |
 | `message` | `string` | Human-readable state description |
+| `models` | `ModelStatus[]` | Per-model load status |
 
 ## `GET /ready`
 
@@ -50,11 +58,11 @@ Returns Prometheus-compatible metrics.
 ```text
 # HELP http_requests_total Total HTTP requests
 # TYPE http_requests_total counter
-http_requests_total{method="POST",path="/v1/embeddings",status="200"} 42
+http_requests_total{method="POST",path="/v1/embeddings",status="200",model="minishlab/potion-multilingual-128M"} 42
 
 # HELP http_request_duration_seconds HTTP request latency
 # TYPE http_request_duration_seconds histogram
-http_request_duration_seconds_bucket{le="0.05"} 12
+http_request_duration_seconds_bucket{method="POST",path="/v1/embeddings",model="minishlab/potion-multilingual-128M",le="0.05"} 12
 ...
 
 # HELP http_errors_total Total HTTP 5xx errors
@@ -66,8 +74,8 @@ http_errors_total{status="500"} 0
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
-| `http_requests_total` | counter | `method`, `path`, `status` | Total request count |
-| `http_request_duration_seconds` | histogram | `method`, `path` | Request latency |
+| `http_requests_total` | counter | `method`, `path`, `status`, `model` | Total request count |
+| `http_request_duration_seconds` | histogram | `method`, `path`, `model` | Request latency |
 | `http_errors_total` | counter | `status` | 5xx error count |
 
 ### Request correlation

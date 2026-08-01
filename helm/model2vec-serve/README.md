@@ -10,6 +10,18 @@ helm install model2vec-serve ./helm/model2vec-serve \
   --set apiKey=your-secret-key
 ```
 
+## Multi-model installation
+
+Load multiple models and specify the default one:
+
+```bash
+helm install model2vec-serve ./helm/model2vec-serve \
+  --set models[0]=minishlab/potion-base-2M \
+  --set models[1]=minishlab/potion-multilingual-128M \
+  --set defaultModel=minishlab/potion-base-2M \
+  --set apiKey=your-secret-key
+```
+
 ## Configuration
 
 | Parameter | Description | Default |
@@ -17,7 +29,10 @@ helm install model2vec-serve ./helm/model2vec-serve \
 | `replicaCount` | Number of replicas | `1` |
 | `image.repository` | Container image repository | `model2vec-serve` |
 | `image.tag` | Container image tag | `0.1.0` |
-| `model` | Hugging Face model id or local path | `minishlab/potion-multilingual-128M` |
+| `models` | List of Hugging Face model ids or local paths | `[]` |
+| `defaultModel` | Default model when a request does not specify one (defaults to the first model in the list if omitted) | `""` |
+| `modelOwner` | Model publisher or owner shown in `/v1/models` responses | `"minishlab"` |
+| `model` | (Deprecated) Hugging Face model id or local path | `minishlab/potion-multilingual-128M` |
 | `apiKey` | API key for authentication | `""` |
 | `args` | Extra CLI arguments | `[]` |
 | `resources` | CPU/memory requests and limits | see `values.yaml` |

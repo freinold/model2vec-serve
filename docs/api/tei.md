@@ -12,6 +12,10 @@ Returns embeddings for one or more input strings.
 - `Content-Type: application/json`
 - `Authorization: Bearer <api_key>` (when authentication is enabled)
 
+### Query parameters
+
+- `model` (string, optional) — loaded model identifier. If omitted, the configured default model is used.
+
 ### Body
 
 ```json
@@ -40,10 +44,16 @@ same order.
 - `inputs` must be non-empty.
 - Batch size must not exceed `--max-batch-size`.
 - Token arrays are not supported and return `400 Bad Request`.
+- If `model` is supplied, it must match a loaded model id.
 
 ## `GET /info`
 
-Returns metadata about the loaded model.
+Returns metadata about the loaded model. Use the `model` query parameter to
+select a specific loaded model; otherwise the configured default model is used.
+
+### Query parameters
+
+- `model` (string, optional) — loaded model identifier. If omitted, the configured default model is used.
 
 ### Response
 
@@ -72,6 +82,7 @@ Returns metadata about the loaded model.
 | Status | `error` code | Cause |
 |--------|--------------|-------|
 | `400` | `invalid_request` | Invalid input, unsupported batch size, token-array input |
+| `400` | `model_not_found` | Requested model is not loaded |
 | `401` | `unauthorized` | Missing or invalid API key |
 | `500` | `internal_error` | Inference failure |
 
@@ -84,5 +95,10 @@ curl -X POST http://localhost:8080/embed \
   -H "Content-Type: application/json" \
   -d '{"inputs":["Hello","World"]}'
 
+curl -X POST 'http://localhost:8080/embed?model=minishlab/potion-code-16M-v2' \
+  -H "Content-Type: application/json" \
+  -d '{"inputs":"def hello(): pass"}'
+
 curl http://localhost:8080/info
+curl 'http://localhost:8080/info?model=minishlab/potion-code-16M-v2'
 ```

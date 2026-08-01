@@ -13,8 +13,9 @@ development.
 
 Key capabilities:
 
-- `POST /v1/embeddings` — OpenAI-compatible embeddings.
+- `POST /v1/embeddings` and `GET /v1/models` — OpenAI-compatible embeddings.
 - `POST /embed` and `GET /info` — TEI-compatible endpoints.
+- Multiple models can be served from a single process.
 - Optional `Authorization: Bearer` API-key authentication.
 - `GET /health`, `GET /ready`, `GET /metrics` — operational endpoints.
 - Interactive OpenAPI/Scalar docs at `/docs`.
@@ -85,8 +86,15 @@ cargo clippy --all-targets --all-features -- -D warnings
 # Run benchmarks
 cargo bench
 
-# Run the service locally
+# Run the service locally with one model
 cargo run --release -- --model minishlab/potion-multilingual-128M --port 8080
+
+# Run the service locally with multiple models
+cargo run --release -- \
+  --model minishlab/potion-multilingual-128M \
+  --model minishlab/potion-code-16M-v2 \
+  --default-model minishlab/potion-multilingual-128M \
+  --port 8080
 ```
 
 ## Code Conventions
@@ -111,18 +119,19 @@ cargo run --release -- --model minishlab/potion-multilingual-128M --port 8080
 
 ### Startup flow
 
-1. `main.rs` parses `Config` from CLI args / environment variables via `clap`.
+1. `main.rs` parses `Config` from CLI args / environment variables via `clap`
+   (including `--model-owner` / `MODEL_OWNER` for `/v1/models` responses).
 2. `telemetry::init_tracing` configures JSON logging.
 3. `telemetry::init_metrics` installs the Prometheus recorder.
-4. `AppState::new` loads the model2vec model from Hugging Face Hub or a local
-   path.
+4. `AppState::new` loads all configured model2vec models from Hugging Face Hub
+   or local paths into a `ModelRegistry`.
 5. The axum listener binds to `host:port` and serves `app(state)`.
 
 ### Router composition
 
 `src/routes/mod.rs` assembles the router:
 
-- `/v1/embeddings`, `/embed`, `/info` are grouped and protected by the optional
+- `/v1/embeddings`, `/v1/models`, `/embed`, `/info` are grouped and protected by the optional
   API-key middleware when `--api-key` / `API_KEY` is set.
 - `/health`, `/ready`, `/metrics` are unprotected.
 - Scalar OpenAPI UI is mounted at `/docs`.
@@ -130,10 +139,11 @@ cargo run --release -- --model minishlab/potion-multilingual-128M --port 8080
 
 ### Model inference
 
-- The `model2vec-rs` crate loads the static model.
-- `state.model.encode(&inputs, max_input_length, batch_size)` returns
+- The `model2vec-rs` crate loads each static model.
+- `state.registry.resolve(...)` selects the requested model (or the default).
+- `loaded_model.model.encode(&inputs, max_input_length, batch_size)` returns
   `Vec<Vec<f32>>`.
-- The model is loaded once at startup and shared via `Arc<AppState>`.
+- Models are loaded concurrently at startup and shared via `Arc<AppState>`.
 
 ### Authentication
 
@@ -148,8 +158,8 @@ cargo run --release -- --model minishlab/potion-multilingual-128M --port 8080
 - Each request gets a correlation ID, either from the incoming `x-request-id`
   header or a generated UUID, and the ID is returned in the response headers.
 - `metrics` + `metrics-exporter-prometheus` expose:
-  - `http_requests_total` counter by method/path/status;
-  - `http_request_duration_seconds` histogram by method/path;
+  - `http_requests_total` counter by method/path/status/model;
+  - `http_request_duration_seconds` histogram by method/path/model;
   - `http_errors_total` counter for 5xx responses.
 
 ## API Compatibility Rules
@@ -158,12 +168,14 @@ When modifying endpoints, preserve the documented contracts:
 
 - **OpenAI**: request body with `input`/`model`/`encoding_format`; response
   shape `{ object, data: [{ object, index, embedding }], model, usage }`.
+  `GET /v1/models` returns the standard OpenAI model list shape.
 - **TEI embed**: request body with `inputs`; response is a JSON array of float
   arrays in the same order as inputs.
 - **TEI info**: response shape `{ model_id, max_input_length,
   embedding_dimension, pooling }`.
 - **Errors**: always return JSON `{ error: "code", message: "..." }` using the
-  codes documented in `specs/001-model2vec-embedding-api/contracts/errors.md`.
+  codes documented in `specs/001-model2vec-embedding-api/contracts/errors.md`
+  and `specs/003-multi-model-serving/contracts/errors.md`.
 
 Always update the corresponding contract tests (`tests/*_contract.rs`) and the
 VitePress docs in `docs/` when endpoint behavior changes.
@@ -189,9 +201,10 @@ VitePress docs in `docs/` when endpoint behavior changes.
 ### Helm
 
 - Chart location: `helm/model2vec-serve/`.
-- Key values: `model`, `apiKey`, `replicaCount`, `image.tag`, `resources`,
-  `autoscaling.enabled`, `extraVolumes`, `extraVolumeMounts`.
-- Install: `helm install model2vec-serve ./helm/model2vec-serve --set model=...`
+- Key values: `models`, `defaultModel`, `model` (deprecated), `apiKey`,
+  `replicaCount`, `image.tag`, `resources`, `autoscaling.enabled`, `extraVolumes`,
+  `extraVolumeMounts`.
+- Install: `helm install model2vec-serve ./helm/model2vec-serve --set models=...`
 - Volume-mounted models are supported via `extraVolumes` / `extraVolumeMounts`.
 
 When chart values or templates change, update both `helm/model2vec-serve/README.md`
@@ -217,9 +230,12 @@ and the VitePress docs page `docs/deployment/helm.md`.
 Read these files when relevant to the task:
 
 - `README.md` — project summary and quick commands.
-- `specs/001-model2vec-embedding-api/spec.md` — requirements and user stories.
-- `specs/001-model2vec-embedding-api/quickstart.md` — end-to-end validation.
-- `specs/001-model2vec-embedding-api/contracts/*.md` — API endpoint contracts.
-- `specs/001-model2vec-embedding-api/data-model.md` — entity/field tables.
-- `specs/001-model2vec-embedding-api/research.md` — architecture decisions.
+- `specs/001-model2vec-embedding-api/spec.md` — base requirements and user stories.
+- `specs/001-model2vec-embedding-api/quickstart.md` — base end-to-end validation.
+- `specs/001-model2vec-embedding-api/contracts/*.md` — base API endpoint contracts.
+- `specs/003-multi-model-serving/spec.md` — multi-model requirements and user stories.
+- `specs/003-multi-model-serving/quickstart.md` — multi-model validation.
+- `specs/003-multi-model-serving/contracts/*.md` — multi-model endpoint contracts.
+- `specs/003-multi-model-serving/data-model.md` — multi-model entity/field tables.
+- `specs/003-multi-model-serving/research.md` — multi-model architecture decisions.
 - `helm/model2vec-serve/README.md` and `values.yaml` — chart documentation.

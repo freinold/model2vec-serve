@@ -3,11 +3,13 @@
 use crate::{
     errors::AppError,
     routes::dto::{
-        EmbeddingObject, EmbeddingRequest, EmbeddingResponse, EmbeddingVector, ErrorResponse, Usage,
+        EmbeddingObject, EmbeddingRequest, EmbeddingResponse, EmbeddingVector, ErrorResponse,
+        ModelsListResponse, OpenAiModelInfo, Usage,
     },
     state::AppState,
+    telemetry::RequestModelId,
 };
-use axum::{Json, extract::State};
+use axum::{Extension, Json, extract::State};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use std::sync::Arc;
 
@@ -38,14 +40,21 @@ fn encode_base64(values: &[f32]) -> String {
 )]
 pub async fn create_embeddings(
     State(state): State<Arc<AppState>>,
+    Extension(model_id_ext): Extension<RequestModelId>,
     Json(request): Json<EmbeddingRequest>,
 ) -> Result<Json<EmbeddingResponse>, AppError> {
     validate_request(&request, &state)?;
 
-    let inputs = request.input.as_strings();
-    let embeddings = state
+    let model_id = request
         .model
-        .encode(&inputs, state.config.max_input_length, inputs.len());
+        .as_deref()
+        .unwrap_or_else(|| state.registry.default_model_id());
+    let loaded = state.registry.resolve(Some(model_id))?;
+
+    let inputs = request.input.as_strings();
+    let embeddings = loaded
+        .model
+        .encode(&inputs, loaded.max_input_length, inputs.len());
 
     let data: Vec<EmbeddingObject> = embeddings
         .into_iter()
@@ -68,12 +77,14 @@ pub async fn create_embeddings(
     let response = EmbeddingResponse {
         object: "list",
         data,
-        model: state.model_id.clone(),
+        model: loaded.model_id.clone(),
         usage: Usage {
             prompt_tokens,
             total_tokens: prompt_tokens,
         },
     };
+
+    model_id_ext.set(loaded.model_id.clone());
 
     Ok(Json(response))
 }
@@ -97,13 +108,46 @@ fn validate_request(request: &EmbeddingRequest, state: &AppState) -> Result<(), 
     }
 
     if let Some(ref model) = request.model {
-        if model != &state.model_id {
-            return Err(AppError::BadRequest(format!(
-                "model '{model}' does not match loaded model '{}'",
-                state.model_id
+        if state.registry.get(model).is_none() {
+            return Err(AppError::ModelNotFound(format!(
+                "model '{model}' is not loaded"
             )));
         }
     }
 
     Ok(())
+}
+
+/// OpenAI-compatible models list endpoint.
+///
+/// # Errors
+///
+/// Returns `AppError::Unauthorized` when authentication is enabled and fails.
+#[utoipa::path(
+    get,
+    path = "/v1/models",
+    tag = "embeddings",
+    responses(
+        (status = 200, description = "Models listed", body = ModelsListResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse)
+    )
+)]
+pub async fn list_models(State(state): State<Arc<AppState>>) -> Json<ModelsListResponse> {
+    const CREATED: i64 = 1_686_935_002;
+    let owner = state.config.model_owner.clone();
+    let data = state
+        .registry
+        .iter()
+        .map(|model| OpenAiModelInfo {
+            id: model.model_id.clone(),
+            object: "model",
+            created: CREATED,
+            owned_by: owner.clone(),
+        })
+        .collect();
+
+    Json(ModelsListResponse {
+        object: "list",
+        data,
+    })
 }

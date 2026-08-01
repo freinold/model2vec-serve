@@ -15,12 +15,25 @@ pub struct Config {
     pub port: u16,
 
     /// Hugging Face model id or local path to a model2vec model directory.
+    ///
+    /// May be provided multiple times or as a comma-separated list via the
+    /// `MODEL` environment variable.
     #[arg(
-        long,
+        long = "model",
         default_value = "minishlab/potion-multilingual-128M",
-        env = "MODEL"
+        env = "MODEL",
+        value_delimiter = ','
     )]
-    pub model: String,
+    pub models: Vec<String>,
+
+    /// Model identifier to use when a request does not specify one.
+    /// Defaults to the first entry in `--model` if omitted.
+    #[arg(long = "default-model", env = "DEFAULT_MODEL")]
+    pub default_model: Option<String>,
+
+    /// Model publisher or owner shown in OpenAI-compatible `/v1/models` responses.
+    #[arg(long = "model-owner", env = "MODEL_OWNER", default_value = "minishlab")]
+    pub model_owner: String,
 
     /// Optional API key. When set, embedding endpoints require a Bearer token.
     #[arg(long, env = "API_KEY")]
@@ -48,5 +61,16 @@ impl Config {
     #[must_use]
     pub fn bind_address(&self) -> String {
         format!("{}:{}", self.host, self.port)
+    }
+
+    /// Returns the model identifier to use when a request does not specify one.
+    ///
+    /// Returns `None` only when no models are configured, which is not a valid
+    /// runtime state.
+    #[must_use]
+    pub fn default_model(&self) -> Option<String> {
+        self.default_model
+            .clone()
+            .or_else(|| self.models.first().cloned())
     }
 }

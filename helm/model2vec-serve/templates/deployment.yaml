@@ -25,8 +25,23 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
+            {{- if .Values.models }}
+            {{- range .Values.models }}
+            - --model
+            - {{ . | quote }}
+            {{- end }}
+            {{- if .Values.defaultModel }}
+            - --default-model
+            - {{ .Values.defaultModel | quote }}
+            {{- end }}
+            {{- else if .Values.model }}
             - --model
             - {{ .Values.model | quote }}
+            {{- end }}
+            {{- if .Values.modelOwner }}
+            - --model-owner
+            - {{ .Values.modelOwner | quote }}
+            {{- end }}
             {{- if .Values.apiKey }}
             - --api-key
             - $(API_KEY)

@@ -23,6 +23,10 @@ pub enum AppError {
     #[error("model error: {0}")]
     ModelError(String),
 
+    /// The requested model is not loaded or unavailable.
+    #[error("model not found: {0}")]
+    ModelNotFound(String),
+
     /// An unexpected internal failure occurred.
     #[error("internal server error")]
     Internal,
@@ -40,6 +44,7 @@ impl IntoResponse for AppError {
         let (status, error_code) = match &self {
             AppError::BadRequest(_) => (StatusCode::BAD_REQUEST, "invalid_request"),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized"),
+            AppError::ModelNotFound(_) => (StatusCode::BAD_REQUEST, "model_not_found"),
             AppError::ModelError(_) | AppError::Internal => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "internal_error")
             }
