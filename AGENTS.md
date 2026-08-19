@@ -203,9 +203,15 @@ VitePress docs in `docs/` when endpoint behavior changes.
 - Chart location: `helm/model2vec-serve/`.
 - Key values: `models`, `defaultModel`, `model` (deprecated), `apiKey`,
   `replicaCount`, `image.tag`, `resources`, `autoscaling.enabled`, `extraVolumes`,
-  `extraVolumeMounts`.
+  `extraVolumeMounts`, `persistence.enabled`, `persistence.existingClaim`,
+  `persistence.mountPath`, `ingress.enabled`, `ingress.className`,
+  `ingress.extraLabels`.
 - Install: `helm install model2vec-serve ./helm/model2vec-serve --set models=...`
+- Published OCI chart: helm install model2vec-serve oci://ghcr.io/freinold/model2vec-serve/model2vec-serve --version <chart-version>
+- Chart publishing: .github/workflows/helm-release.yml runs chart-releaser + helm push to ghcr.io on helm/** changes to main; Chart.yaml version must be bumped for a release to be cut (enforced by ct lint in CI).
+- Chart CI: ct lint + ct install (kind) run on PRs that change helm/**; skip the install test with [skip install] in the commit message.
 - Volume-mounted models are supported via `extraVolumes` / `extraVolumeMounts`.
+- An optional PVC for the model download cache is supported via the persistence block (sets HOME to the mount path; an operator-supplied HOME env wins).
 
 When chart values or templates change, update both `helm/model2vec-serve/README.md`
 and the VitePress docs page `docs/deployment/helm.md`.
@@ -238,4 +244,7 @@ Read these files when relevant to the task:
 - `specs/003-multi-model-serving/contracts/*.md` — multi-model endpoint contracts.
 - `specs/003-multi-model-serving/data-model.md` — multi-model entity/field tables.
 - `specs/003-multi-model-serving/research.md` — multi-model architecture decisions.
+- `specs/004-helm-chart-enhancements/spec.md` — chart publishing, persistence, ingress, and chart CI requirements.
+- `specs/004-helm-chart-enhancements/research.md` — chart tooling and cache-redirection decisions.
+- `specs/004-helm-chart-enhancements/contracts/*.md` — chart values and publishing contracts.
 - `helm/model2vec-serve/README.md` and `values.yaml` — chart documentation.

@@ -6,3 +6,9 @@ Get the application URL by running:
   kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:8080
 
 Then visit http://127.0.0.1:8080/docs for the API documentation.
+{{- if .Values.ingress.enabled }}
+
+The service is exposed through an Ingress at:
+
+  http{{ if .Values.ingress.tls }}s{{ end }}://{{ (index .Values.ingress.hosts 0).host }}
+{{- end }}

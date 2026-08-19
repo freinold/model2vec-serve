@@ -3,6 +3,22 @@
 The Helm chart under `helm/model2vec-serve/` deploys `model2vec-serve` on
 Kubernetes.
 
+## Install from the OCI registry
+
+The chart is published to the GitHub Container Registry on every versioned
+chart change:
+
+```bash
+helm install model2vec-serve \
+  oci://ghcr.io/freinold/model2vec-serve/model2vec-serve \
+  --version 0.2.0 \
+  --set models[0]=minishlab/potion-multilingual-128M \
+  --set apiKey=your-secret-key
+```
+
+Installing from a local checkout (see "## Install" below) still works for
+development.
+
 ## Install
 
 ```bash
@@ -42,8 +58,8 @@ helm uninstall model2vec-serve
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `replicaCount` | Number of replicas | `1` |
-| `image.repository` | Container image repository | `model2vec-serve` |
-| `image.tag` | Container image tag | `0.1.0` |
+| `image.repository` | Container image repository | `ghcr.io/freinold/model2vec-serve` |
+| `image.tag` | Container image tag | `0.3.0` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `models` | List of Hugging Face model ids or local paths | `[]` |
 | `defaultModel` | Default model when a request does not specify one (defaults to the first model in the list if omitted) | `""` |
@@ -68,6 +84,19 @@ helm uninstall model2vec-serve
 | `nodeSelector` | Node selector | `{}` |
 | `tolerations` | Tolerations | `[]` |
 | `affinity` | Affinity rules | `{}` |
+| `persistence.enabled` | Create and mount a PVC for the model download cache | `false` |
+| `persistence.existingClaim` | Use an existing PVC instead of creating one | `""` |
+| `persistence.storageClass` | Storage class (empty = cluster default) | `""` |
+| `persistence.accessModes` | PVC access modes | `["ReadWriteOnce"]` |
+| `persistence.size` | PVC storage request | `5Gi` |
+| `persistence.mountPath` | Mount path; `HOME` is set here so the HF cache lives at `<mountPath>/.cache/huggingface/hub` | `/models` |
+| `persistence.annotations` | PVC annotations | `{}` |
+| `ingress.enabled` | Create an Ingress for external access | `false` |
+| `ingress.className` | Ingress class name | `""` |
+| `ingress.annotations` | Ingress annotations | `{}` |
+| `ingress.extraLabels` | Extra labels merged into the Ingress metadata | `{}` |
+| `ingress.hosts` | Host/path rules (host, paths[path, pathType]) | see `values.yaml` |
+| `ingress.tls` | TLS entries (secretName, hosts) | `[]` |
 
 ## Readiness and liveness
 
@@ -91,6 +120,38 @@ helm install model2vec-serve ./helm/model2vec-serve \
   --set extraVolumes[0].hostPath.path=/path/to/local/model \
   --set extraVolumeMounts[0].name=model-volume \
   --set extraVolumeMounts[0].mountPath=/models/my-model
+```
+
+## Persistent model cache
+
+Set `persistence.enabled` to mount a persistent volume claim at
+`persistence.mountPath`. The chart sets the container's `HOME` to that path, so
+model downloads land in `<mountPath>/.cache/huggingface/hub` and survive pod
+restarts. An operator-supplied `HOME` entry in `env` overrides the injected
+value.
+
+```bash
+helm install model2vec-serve ./helm/model2vec-serve \
+  --set models[0]=minishlab/potion-multilingual-128M \
+  --set persistence.enabled=true \
+  --set persistence.size=10Gi
+```
+
+Set `persistence.existingClaim` to reuse a pre-provisioned claim instead of
+creating one.
+
+## Expose via Ingress
+
+The chart can create a Kubernetes Ingress (disabled by default). Host rules
+route to the service `http` port; `ingress.extraLabels` are merged with the
+standard chart labels.
+
+```bash
+helm install model2vec-serve ./helm/model2vec-serve \
+  --set ingress.enabled=true \
+  --set ingress.className=nginx \
+  --set ingress.hosts[0].host=embeddings.example.com \
+  --set ingress.extraLabels.environment=production
 ```
 
 ## Resource defaults

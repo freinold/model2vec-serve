@@ -1,0 +1,2 @@
+# chart-releaser configuration: https://github.com/helm/chart-releaser#configuration
+generate-release-notes: true

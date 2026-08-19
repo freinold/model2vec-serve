@@ -2,7 +2,7 @@
 replicaCount: 1
 
 image:
-  repository: model2vec-serve
+  repository: ghcr.io/freinold/model2vec-serve
   pullPolicy: IfNotPresent
   tag: ""
 
@@ -55,6 +55,35 @@ autoscaling:
 # Additional volumes to mount model files or secrets.
 extraVolumes: []
 extraVolumeMounts: []
+
+# Optional persistence for the Hugging Face model download cache.
+# When enabled, a PVC is mounted at mountPath and HOME is set to that path so
+# downloaded models land in <mountPath>/.cache/huggingface/hub and survive pod
+# restarts. Set existingClaim to use a pre-provisioned claim instead of
+# creating one. An operator-supplied HOME in `env` overrides the injected one.
+persistence:
+  enabled: false
+  existingClaim: ""
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 5Gi
+  mountPath: /models
+  annotations: {}
+
+# Optional Ingress to expose the service outside the cluster.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # Extra labels merged with the standard chart labels on the Ingress resource.
+  extraLabels: {}
+  hosts:
+    - host: model2vec-serve.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
 
 # Pod security context.
 podSecurityContext: {}
