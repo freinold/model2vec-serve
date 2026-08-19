@@ -98,6 +98,18 @@ and tagging strategy.
 
 ## Helm
 
+The chart is published to the GitHub Container Registry:
+
+```bash
+helm install model2vec-serve \
+  oci://ghcr.io/freinold/model2vec-serve/model2vec-serve \
+  --version 0.2.0 \
+  --set models[0]=minishlab/potion-multilingual-128M \
+  --set apiKey=your-secret-key
+```
+
+Or install from a local checkout:
+
 ```bash
 helm install model2vec-serve ./helm/model2vec-serve \
   --set model=minishlab/potion-multilingual-128M \

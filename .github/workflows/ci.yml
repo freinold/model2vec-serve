@@ -34,8 +34,12 @@ jobs:
 
   helm:
     runs-on: ubuntu-latest
+    env:
+      COMMIT_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Set up Helm
         uses: azure/setup-helm@v5
         with:
@@ -44,3 +48,21 @@ jobs:
         run: bash tests/helm/lint_test.sh
       - name: Run Helm template validation
         run: bash tests/helm/template_test.sh
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.8.0
+      - name: List changed charts
+        id: list-changed
+        run: |
+          changed=$(ct list-changed --target-branch ${{ github.event.repository.default_branch }})
+          if [[ -n "$changed" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run chart-testing lint
+        if: steps.list-changed.outputs.changed == 'true'
+        run: ct lint --target-branch ${{ github.event.repository.default_branch }}
+      - name: Create kind cluster
+        if: "steps.list-changed.outputs.changed == 'true' && ! contains(env.COMMIT_MSG, '[skip install]')"
+        uses: helm/kind-action@v1
+      - name: Run chart-testing install
+        if: "steps.list-changed.outputs.changed == 'true' && ! contains(env.COMMIT_MSG, '[skip install]')"
+        run: ct install --target-branch ${{ github.event.repository.default_branch }} --debug

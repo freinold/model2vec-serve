@@ -1,0 +1,4 @@
+# Values used by `ct install` chart-testing smoke installs.
+# Uses a tiny model to keep ephemeral-cluster installs fast (see
+# specs/004-helm-chart-enhancements/research.md).
+model: minishlab/potion-base-2M

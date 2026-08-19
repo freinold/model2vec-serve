@@ -40,4 +40,57 @@ echo "$OUTPUT" | grep -q -- '- --default-model$'
 echo "$OUTPUT" | grep -q -- '- --model-owner$'
 echo "$OUTPUT" | grep -q 'acme'
 
+# Chart metadata and default image reference are publish-ready.
+OUTPUT=$(render)
+echo "$OUTPUT" | grep -q 'helm.sh/chart: model2vec-serve-0.2.0'
+echo "$OUTPUT" | grep -q 'app.kubernetes.io/version: "0.3.0"'
+echo "$OUTPUT" | grep -q 'image: "ghcr.io/freinold/model2vec-serve:0.3.0"'
+
+# Persistence is disabled by default: no PVC, no models volume, no HOME override.
+OUTPUT=$(render)
+! echo "$OUTPUT" | grep -q "kind: PersistentVolumeClaim"
+! echo "$OUTPUT" | grep -q "name: models"
+! echo "$OUTPUT" | grep -q "name: HOME"
+
+# Enabling persistence renders the claim and wires volume, mount, and HOME.
+OUTPUT=$(render --set persistence.enabled=true)
+echo "$OUTPUT" | grep -q "kind: PersistentVolumeClaim"
+echo "$OUTPUT" | grep -q "name: model2vec-serve-models"
+echo "$OUTPUT" | grep -qE 'storage: "?5Gi"?'
+echo "$OUTPUT" | grep -q "ReadWriteOnce"
+echo "$OUTPUT" | grep -q "claimName: model2vec-serve-models"
+echo "$OUTPUT" | grep -q "mountPath: /models"
+echo "$OUTPUT" | grep -A1 "name: HOME" | grep -qE 'value: "?/models"?'
+
+# An existing claim is referenced without creating a PVC.
+OUTPUT=$(render --set persistence.enabled=true --set persistence.existingClaim=my-models)
+! echo "$OUTPUT" | grep -q "kind: PersistentVolumeClaim"
+echo "$OUTPUT" | grep -q "claimName: my-models"
+
+# Ingress is disabled by default.
+OUTPUT=$(render)
+! echo "$OUTPUT" | grep -q "kind: Ingress"
+
+# Enabling the ingress renders rules, merged extra labels, and the service backend.
+OUTPUT=$(render \
+  --set ingress.enabled=true \
+  --set ingress.hosts[0].host=embeddings.example.com \
+  --set ingress.extraLabels.environment=staging)
+echo "$OUTPUT" | grep -q "kind: Ingress"
+INGRESS_DOC=$(echo "$OUTPUT" | sed -n '/^kind: Ingress$/,/^---$/p')
+echo "$INGRESS_DOC" | grep -q "environment: staging"
+echo "$INGRESS_DOC" | grep -q "app.kubernetes.io/name: model2vec-serve"
+echo "$INGRESS_DOC" | grep -q "host: embeddings.example.com"
+echo "$INGRESS_DOC" | grep -q "pathType: Prefix"
+echo "$INGRESS_DOC" | grep -q "name: http"
+
+# TLS configuration renders a tls block.
+OUTPUT=$(render \
+  --set ingress.enabled=true \
+  --set ingress.hosts[0].host=embeddings.example.com \
+  --set ingress.tls[0].secretName=tls-secret \
+  --set "ingress.tls[0].hosts[0]=embeddings.example.com")
+INGRESS_DOC=$(echo "$OUTPUT" | sed -n '/^kind: Ingress$/,/^---$/p')
+echo "$INGRESS_DOC" | grep -q "secretName: tls-secret"
+
 echo "Helm chart validation passed."

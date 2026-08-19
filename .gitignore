@@ -1,3 +1,7 @@
+# chart-releaser / chart-testing local artifacts
+.cr-release-packages/
+.cr-index/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
