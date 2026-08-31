@@ -37,10 +37,12 @@ pub struct Config {
 
     /// Path identifier alias for a model, as `KEY=ALIAS`.
     ///
-    /// `KEY` is the model identifier or local path exactly as configured via
-    /// `--model`; `ALIAS` overrides the path segment used by the
-    /// `/tei/{model_id}/...` endpoints. May be provided multiple times or as
-    /// a comma-separated list via the `MODEL_ALIAS` environment variable.
+    /// `KEY` identifies the target model: either the model identifier or
+    /// local path exactly as configured via `--model`, or the derived
+    /// canonical identifier (for local paths, the directory name). `ALIAS`
+    /// overrides the path segment used by the `/tei/{model_id}/...`
+    /// endpoints. May be provided multiple times or as a comma-separated
+    /// list via the `MODEL_ALIAS` environment variable.
     #[arg(
         long = "model-alias",
         env = "MODEL_ALIAS",
@@ -93,6 +95,12 @@ fn parse_model_alias(pair: &str) -> Result<(String, String), String> {
     if alias.is_empty() {
         return Err(format!(
             "invalid model alias '{pair}': alias must not be empty"
+        ));
+    }
+
+    if alias.chars().any(char::is_whitespace) {
+        return Err(format!(
+            "invalid model alias '{pair}': alias must not contain whitespace"
         ));
     }
 

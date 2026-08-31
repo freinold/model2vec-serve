@@ -156,3 +156,11 @@ fn alias_with_slash_is_rejected() {
 
     assert!(err.to_string().contains("single path segment"));
 }
+
+#[test]
+fn alias_with_whitespace_is_rejected() {
+    let err = Config::try_parse_from(["model2vec-serve", "--model-alias", "some-model=two words"])
+        .unwrap_err();
+
+    assert!(err.to_string().contains("whitespace"));
+}

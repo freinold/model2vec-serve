@@ -491,6 +491,41 @@ async fn unmatched_alias_key_aborts_startup() {
 }
 
 #[tokio::test]
+async fn multiple_aliases_for_one_model_abort_startup() {
+    let original = model_dir();
+    let temp = TempDir::new().expect("failed to create temp dir");
+    let model_a = temp.path().join("model-a");
+    std::os::unix::fs::symlink(&original, &model_a).expect("failed to create symlink model-a");
+    let model_a_path = model_a.to_string_lossy().to_string();
+
+    let config = Config {
+        host: "127.0.0.1".to_string(),
+        port: 0,
+        models: vec![model_a_path.clone()],
+        default_model: Some(model_a_path.clone()),
+        model_owner: "minishlab".to_string(),
+        model_alias: vec![
+            ("model-a".to_string(), "alpha".to_string()),
+            (model_a_path, "beta".to_string()),
+        ],
+        api_key: None,
+        max_batch_size: 32,
+        max_input_length: 512,
+        log_level: "warn".to_string(),
+        request_timeout_seconds: 30,
+    };
+
+    let Err(err) = AppState::new(config, metrics_handle()) else {
+        panic!("startup should fail when one model has multiple aliases");
+    };
+    let message = format!("{err:#}");
+    assert!(
+        message.contains("model-a") && message.contains("alpha") && message.contains("beta"),
+        "error should name the model and both aliases: {message}"
+    );
+}
+
+#[tokio::test]
 async fn each_model_info_reports_its_own_metadata() {
     let original = model_dir();
     let temp = TempDir::new().expect("failed to create temp dir");

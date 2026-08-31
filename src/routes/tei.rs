@@ -114,6 +114,9 @@ pub async fn tei_embed(
     post,
     path = "/tei/{model_id}/embed",
     tag = "tei",
+    params(
+        ("model_id" = String, Path, description = "Model path identifier"),
+    ),
     request_body = TeiEmbedRequest,
     responses(
         (status = 200, description = "Embeddings generated", body = Vec<Vec<f32>>),
@@ -192,6 +195,9 @@ pub async fn tei_info(
     get,
     path = "/tei/{model_id}/info",
     tag = "tei",
+    params(
+        ("model_id" = String, Path, description = "Model path identifier"),
+    ),
     responses(
         (status = 200, description = "Model information", body = ModelInfo),
         (status = 400, description = "Retired model qualifier", body = ErrorResponse),
@@ -201,6 +207,7 @@ pub async fn tei_info(
 )]
 pub async fn tei_per_model_info(
     State(state): State<Arc<AppState>>,
+    Extension(model_id_ext): Extension<RequestModelId>,
     Path(path_id): Path<String>,
     RawQuery(raw_query): RawQuery,
 ) -> Result<Json<ModelInfo>, AppError> {
@@ -209,6 +216,8 @@ pub async fn tei_per_model_info(
         .registry
         .get_by_path(&path_id)
         .ok_or(AppError::ModelRouteNotFound(path_id))?;
+
+    model_id_ext.set(loaded.model_id.clone());
 
     Ok(Json(ModelInfo {
         model_id: loaded.model_id.clone(),

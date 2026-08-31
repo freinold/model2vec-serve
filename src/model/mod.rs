@@ -256,15 +256,17 @@ impl ModelRegistry {
 /// uniqueness.
 ///
 /// A model's path identifier is its configured alias, or the default from
-/// [`path_identifier`] when no alias matches. Alias keys must match a
-/// configured model path (exactly as given to `--model`) or a canonical model
-/// identifier; path identifiers must be unique across all loaded models.
+/// [`path_identifier`] when no alias matches. Alias keys are normalized to
+/// the canonical model identifier they target (either the `--model` value's
+/// derived identifier or a canonical identifier directly); each key must
+/// match exactly one model, each model must have at most one alias, and path
+/// identifiers must be unique across all loaded models.
 ///
 /// # Errors
 ///
 /// Returns an error when a `KEY=ALIAS` key is duplicated, when an alias key
-/// matches no configured model, or when two loaded models resolve to the same
-/// path identifier.
+/// matches no configured model, when one model has multiple aliases, or when
+/// two loaded models resolve to the same path identifier.
 fn build_path_index(
     model_paths: &[String],
     models: &HashMap<String, LoadedModel>,
@@ -277,33 +279,45 @@ fn build_path_index(
         }
     }
 
-    for key in aliases.keys() {
-        let matched = model_paths.iter().any(|path| path == key)
-            || models.values().any(|model| model.model_id == *key);
-        if !matched {
-            return Err(anyhow::anyhow!(
-                "model alias key '{key}' does not match any configured model; use a model identifier or local path from --model"
-            ));
-        }
-    }
-
     let derived_by_path: HashMap<&str, String> = model_paths
         .iter()
         .map(|path| (path.as_str(), derive_model_id(path)))
         .collect();
 
+    let mut alias_by_model: HashMap<&str, Vec<&str>> = HashMap::with_capacity(aliases.len());
+    for (key, alias) in &aliases {
+        let target = derived_by_path.get(*key).map(String::as_str).or_else(|| {
+            models
+                .keys()
+                .find(|model_id| model_id.as_str() == *key)
+                .map(String::as_str)
+        });
+        let Some(target) = target else {
+            return Err(anyhow::anyhow!(
+                "model alias key '{key}' does not match any configured model; use a model identifier or local path from --model"
+            ));
+        };
+        alias_by_model.entry(target).or_default().push(*alias);
+    }
+
+    for (model_id, model_aliases) in &alias_by_model {
+        if model_aliases.len() > 1 {
+            return Err(anyhow::anyhow!(
+                "model '{model_id}' has multiple path aliases ({}); configure exactly one --model-alias per model",
+                model_aliases.join(", ")
+            ));
+        }
+    }
+
     let mut path_index: HashMap<String, String> = HashMap::with_capacity(models.len());
     for model in models.values() {
-        let alias = aliases
-            .iter()
-            .find(|(key, _)| {
-                derived_by_path
-                    .get(*key)
-                    .is_some_and(|id| id == &model.model_id)
-                    || **key == model.model_id
-            })
-            .map(|(_, alias)| (*alias).to_string());
-        let path_id = alias.unwrap_or_else(|| path_identifier(&model.model_id));
+        let path_id = alias_by_model
+            .get(model.model_id.as_str())
+            .and_then(|model_aliases| model_aliases.first())
+            .map_or_else(
+                || path_identifier(&model.model_id),
+                |alias| (*alias).to_string(),
+            );
 
         if let Some(existing) = path_index.insert(path_id.clone(), model.model_id.clone()) {
             return Err(anyhow::anyhow!(
