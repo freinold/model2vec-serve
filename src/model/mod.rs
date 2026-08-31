@@ -54,10 +54,24 @@ fn derive_model_id(model: &str) -> String {
     }
 }
 
+/// Return the default per-model path identifier for a canonical model
+/// identifier: the substring after the final `/`.
+///
+/// Operators can override this per model via `--model-alias`; see
+/// [`ModelRegistry::get_by_path`].
+#[must_use]
+pub fn path_identifier(model_id: &str) -> String {
+    model_id
+        .rsplit_once('/')
+        .map_or(model_id.to_string(), |(_, last)| last.to_string())
+}
+
 /// Registry of all loaded models available for inference.
 pub struct ModelRegistry {
     /// Loaded models keyed by canonical identifier.
     models: HashMap<String, LoadedModel>,
+    /// Path identifiers mapped to canonical model identifiers.
+    path_index: HashMap<String, String>,
     /// Identifier to use when a request does not specify a model.
     default_model_id: String,
     /// Models that failed to load, with their configured path and the error.
@@ -78,6 +92,7 @@ impl ModelRegistry {
         model_paths: &[String],
         default_model_id: Option<String>,
         max_input_length: usize,
+        model_alias: &[(String, String)],
     ) -> anyhow::Result<Self> {
         if model_paths.is_empty() {
             return Err(anyhow::anyhow!("at least one model must be configured"));
@@ -143,8 +158,11 @@ impl ModelRegistry {
             }
         }
 
+        let path_index = build_path_index(model_paths, &models, model_alias)?;
+
         Ok(Self {
             models,
+            path_index,
             default_model_id,
             failed_models: errors,
         })
@@ -162,6 +180,27 @@ impl ModelRegistry {
     #[must_use]
     pub fn get(&self, model_id: &str) -> Option<&LoadedModel> {
         self.models.get(model_id)
+    }
+
+    /// Look up a model by its per-model path identifier.
+    ///
+    /// The path identifier is the model's configured alias, or the default
+    /// derived by [`path_identifier`] when no alias is configured. Uniqueness
+    /// of path identifiers is enforced at startup.
+    #[must_use]
+    pub fn get_by_path(&self, path_id: &str) -> Option<&LoadedModel> {
+        self.path_index
+            .get(path_id)
+            .and_then(|model_id| self.models.get(model_id))
+    }
+
+    /// Return the per-model path identifier for a canonical model identifier.
+    #[must_use]
+    pub fn path_identifier_for(&self, model_id: &str) -> Option<&str> {
+        self.path_index
+            .iter()
+            .find(|(_, model)| model.as_str() == model_id)
+            .map(|(path, _)| path.as_str())
     }
 
     /// Look up a model by identifier, falling back to the default when `None` is passed.
@@ -211,6 +250,70 @@ impl ModelRegistry {
     pub fn loaded_count(&self) -> usize {
         self.models.len()
     }
+}
+
+/// Derive the per-model path identifier for every loaded model and validate
+/// uniqueness.
+///
+/// A model's path identifier is its configured alias, or the default from
+/// [`path_identifier`] when no alias matches. Alias keys must match a
+/// configured model path (exactly as given to `--model`) or a canonical model
+/// identifier; path identifiers must be unique across all loaded models.
+///
+/// # Errors
+///
+/// Returns an error when a `KEY=ALIAS` key is duplicated, when an alias key
+/// matches no configured model, or when two loaded models resolve to the same
+/// path identifier.
+fn build_path_index(
+    model_paths: &[String],
+    models: &HashMap<String, LoadedModel>,
+    model_alias: &[(String, String)],
+) -> anyhow::Result<HashMap<String, String>> {
+    let mut aliases: HashMap<&str, &str> = HashMap::with_capacity(model_alias.len());
+    for (key, alias) in model_alias {
+        if aliases.insert(key.as_str(), alias.as_str()).is_some() {
+            return Err(anyhow::anyhow!("duplicate model alias key '{key}'"));
+        }
+    }
+
+    for key in aliases.keys() {
+        let matched = model_paths.iter().any(|path| path == key)
+            || models.values().any(|model| model.model_id == *key);
+        if !matched {
+            return Err(anyhow::anyhow!(
+                "model alias key '{key}' does not match any configured model; use a model identifier or local path from --model"
+            ));
+        }
+    }
+
+    let derived_by_path: HashMap<&str, String> = model_paths
+        .iter()
+        .map(|path| (path.as_str(), derive_model_id(path)))
+        .collect();
+
+    let mut path_index: HashMap<String, String> = HashMap::with_capacity(models.len());
+    for model in models.values() {
+        let alias = aliases
+            .iter()
+            .find(|(key, _)| {
+                derived_by_path
+                    .get(*key)
+                    .is_some_and(|id| id == &model.model_id)
+                    || **key == model.model_id
+            })
+            .map(|(_, alias)| (*alias).to_string());
+        let path_id = alias.unwrap_or_else(|| path_identifier(&model.model_id));
+
+        if let Some(existing) = path_index.insert(path_id.clone(), model.model_id.clone()) {
+            return Err(anyhow::anyhow!(
+                "models '{existing}' and '{}' resolve to the same per-model path identifier '{path_id}'; configure distinct aliases via --model-alias",
+                model.model_id
+            ));
+        }
+    }
+
+    Ok(path_index)
 }
 
 /// Per-model status exposed by the health endpoint.

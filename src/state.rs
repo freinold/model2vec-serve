@@ -22,7 +22,12 @@ impl AppState {
     /// Returns an error if no models can be loaded.
     pub fn new(config: Config, metrics_handle: Arc<PrometheusHandle>) -> anyhow::Result<Arc<Self>> {
         let default_model = config.default_model.clone();
-        let registry = ModelRegistry::load(&config.models, default_model, config.max_input_length)?;
+        let registry = ModelRegistry::load(
+            &config.models,
+            default_model,
+            config.max_input_length,
+            &config.model_alias,
+        )?;
 
         Ok(Arc::new(Self {
             config,

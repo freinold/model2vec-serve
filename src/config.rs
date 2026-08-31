@@ -35,6 +35,20 @@ pub struct Config {
     #[arg(long = "model-owner", env = "MODEL_OWNER", default_value = "minishlab")]
     pub model_owner: String,
 
+    /// Path identifier alias for a model, as `KEY=ALIAS`.
+    ///
+    /// `KEY` is the model identifier or local path exactly as configured via
+    /// `--model`; `ALIAS` overrides the path segment used by the
+    /// `/tei/{model_id}/...` endpoints. May be provided multiple times or as
+    /// a comma-separated list via the `MODEL_ALIAS` environment variable.
+    #[arg(
+        long = "model-alias",
+        env = "MODEL_ALIAS",
+        value_delimiter = ',',
+        value_parser = parse_model_alias
+    )]
+    pub model_alias: Vec<(String, String)>,
+
     /// Optional API key. When set, embedding endpoints require a Bearer token.
     #[arg(long, env = "API_KEY")]
     pub api_key: Option<String>,
@@ -54,6 +68,41 @@ pub struct Config {
     /// Per-request timeout in seconds.
     #[arg(long, default_value_t = 30, env = "REQUEST_TIMEOUT_SECONDS")]
     pub request_timeout_seconds: u64,
+}
+
+/// Parse a `KEY=ALIAS` pair for [`Config::model_alias`].
+///
+/// # Errors
+///
+/// Returns a message describing the first validation failure: missing `=`,
+/// empty key or alias, or an alias that is not a single URL path segment.
+fn parse_model_alias(pair: &str) -> Result<(String, String), String> {
+    let Some((key, alias)) = pair.split_once('=') else {
+        return Err(format!("invalid model alias '{pair}': expected KEY=ALIAS"));
+    };
+
+    let key = key.trim();
+    let alias = alias.trim();
+
+    if key.is_empty() {
+        return Err(format!(
+            "invalid model alias '{pair}': key must not be empty"
+        ));
+    }
+
+    if alias.is_empty() {
+        return Err(format!(
+            "invalid model alias '{pair}': alias must not be empty"
+        ));
+    }
+
+    if alias.contains('/') {
+        return Err(format!(
+            "invalid model alias '{pair}': alias must be a single path segment without '/'"
+        ));
+    }
+
+    Ok((key.to_string(), alias.to_string()))
 }
 
 impl Config {

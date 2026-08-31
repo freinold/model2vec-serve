@@ -19,6 +19,7 @@ fn default_values_are_reasonable() {
         models: vec![DEFAULT_MODEL.to_string()],
         default_model: None,
         model_owner: "minishlab".to_string(),
+        model_alias: Vec::new(),
         api_key: None,
         max_batch_size: 256,
         max_input_length: 512,
@@ -77,4 +78,81 @@ fn explicit_default_model_is_used() {
     ]);
 
     assert_eq!(config.default_model(), Some(CODE_MODEL.to_string()));
+}
+
+#[test]
+fn parse_single_model_alias_flag() {
+    let config = Config::parse_from([
+        "model2vec-serve",
+        "--model-alias",
+        "minishlab/potion-multilingual-128M=potion-multi",
+    ]);
+
+    assert_eq!(
+        config.model_alias,
+        vec![(
+            "minishlab/potion-multilingual-128M".to_string(),
+            "potion-multi".to_string()
+        )]
+    );
+}
+
+#[test]
+fn parse_multiple_model_alias_flags() {
+    let config = Config::parse_from([
+        "model2vec-serve",
+        "--model-alias",
+        &format!("{DEFAULT_MODEL}=potion-multi"),
+        "--model-alias",
+        &format!("{CODE_MODEL}=potion-code"),
+    ]);
+
+    assert_eq!(
+        config.model_alias,
+        vec![
+            (DEFAULT_MODEL.to_string(), "potion-multi".to_string()),
+            (CODE_MODEL.to_string(), "potion-code".to_string()),
+        ]
+    );
+}
+
+#[test]
+fn parse_comma_separated_model_alias_flag() {
+    let config = Config::parse_from([
+        "model2vec-serve",
+        "--model-alias",
+        &format!("{CODE_MODEL}=code,minishlab/potion-base-2M=base"),
+    ]);
+
+    assert_eq!(
+        config.model_alias,
+        vec![
+            (CODE_MODEL.to_string(), "code".to_string()),
+            ("minishlab/potion-base-2M".to_string(), "base".to_string()),
+        ]
+    );
+}
+
+#[test]
+fn malformed_model_alias_is_rejected() {
+    let err = Config::try_parse_from(["model2vec-serve", "--model-alias", "missing-equals-sign"])
+        .unwrap_err();
+
+    assert!(err.to_string().contains("KEY=ALIAS"));
+}
+
+#[test]
+fn empty_alias_is_rejected() {
+    let err =
+        Config::try_parse_from(["model2vec-serve", "--model-alias", "some-model="]).unwrap_err();
+
+    assert!(err.to_string().contains("alias must not be empty"));
+}
+
+#[test]
+fn alias_with_slash_is_rejected() {
+    let err = Config::try_parse_from(["model2vec-serve", "--model-alias", "some-model=foo/bar"])
+        .unwrap_err();
+
+    assert!(err.to_string().contains("single path segment"));
 }
