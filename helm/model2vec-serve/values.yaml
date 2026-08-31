@@ -18,6 +18,13 @@ defaultModel: ""
 # Model publisher or owner shown in OpenAI-compatible `/v1/models` responses.
 modelOwner: "minishlab"
 
+# Path identifier aliases for the `/tei/{model_id}/...` endpoints.
+# Each entry maps a model key (a `models` entry or its derived id) to a URL
+# path alias. Duplicate resolved path segments abort startup.
+modelAliases: []
+# - key: minishlab/potion-multilingual-128M
+#   alias: potion-multi
+
 # (Deprecated) Single Hugging Face model id or local path.
 # Use `models` and `defaultModel` instead.
 model: "minishlab/potion-multilingual-128M"
