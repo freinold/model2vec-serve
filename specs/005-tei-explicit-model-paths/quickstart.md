@@ -84,13 +84,14 @@ default-model embedding.
 ```bash
 cargo run --release -- \
   --model minishlab/potion-base-32M \
-  --model minishlab/potion-multilingual-128M  # both would resolve to different ids; instead force:
+  --model minishlab/potion-multilingual-128M \
+  --model-alias "minishlab/potion-base-32M=same" \
+  --model-alias "minishlab/potion-multilingual-128M=same"
 ```
 
-To force a conflict, use two identifiers sharing a last segment (e.g., a
-local dir and an alias mapping another model to the same name). Expected:
-process exits non-zero with an error naming both conflicting models and the
-hint to configure distinct `--model-alias` values.
+Both models resolve to the same path identifier `same`. Expected: process
+exits non-zero with an error naming both conflicting models and the hint to
+configure distinct `--model-alias` values.
 
 ## Validate auth on per-model paths
 

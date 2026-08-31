@@ -109,8 +109,8 @@ docker run -p 8080:8080 \
 Released images are published to GHCR:
 
 ```bash
-docker pull ghcr.io/freinold/model2vec-serve:v0.1.0
-docker run -p 8080:8080 -e MODEL=minishlab/potion-multilingual-128M ghcr.io/freinold/model2vec-serve:v0.1.0
+docker pull ghcr.io/freinold/model2vec-serve:v0.5.0
+docker run -p 8080:8080 -e MODEL=minishlab/potion-multilingual-128M ghcr.io/freinold/model2vec-serve:v0.5.0
 ```
 
 See [docs/deployment/docker.md](docs/deployment/docker.md) for the full release
