@@ -31,7 +31,9 @@ jobs:
         with:
           command: release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # PAT so the created tag/release trigger downstream workflows
+          # (GITHUB_TOKEN events do not start new workflow runs).
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
 
   release-plz-pr:
     name: Release-plz PR
@@ -57,4 +59,5 @@ jobs:
         with:
           command: release-pr
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # PAT so the opened release PR can trigger CI checks.
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
