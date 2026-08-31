@@ -19,7 +19,11 @@ use crate::{
         },
         health::{__path_health, __path_ready, health, ready},
         metrics::{__path_metrics, metrics},
-        tei::{__path_tei_embed, __path_tei_info, tei_embed, tei_info},
+        tei::{
+            __path_tei_embed, __path_tei_info, __path_tei_per_model_embed,
+            __path_tei_per_model_info, tei_embed, tei_info, tei_per_model_embed,
+            tei_per_model_info,
+        },
     },
     state::AppState,
     telemetry::request_tracing_middleware,
@@ -42,14 +46,16 @@ use utoipa_scalar::{Scalar, Servable};
 #[openapi(
     info(
         title = "model2vec-serve",
-        version = "0.1.0",
+        version = "0.5.0",
         description = "OpenAI and TEI compatible embeddings server"
     ),
     paths(
         create_embeddings,
         list_models,
         tei_embed,
+        tei_per_model_embed,
         tei_info,
+        tei_per_model_info,
         health,
         ready,
         metrics
@@ -77,6 +83,8 @@ pub fn app(state: Arc<AppState>) -> Router {
         .route("/v1/embeddings", post(create_embeddings))
         .route("/v1/models", get(list_models))
         .route("/embed", post(tei_embed))
+        .route("/tei/{model_id}/embed", post(tei_per_model_embed))
+        .route("/tei/{model_id}/info", get(tei_per_model_info))
         .route("/info", get(tei_info));
 
     let protected = if let Some(ref key) = state.config.api_key {
