@@ -11,7 +11,7 @@ chart change:
 ```bash
 helm install model2vec-serve \
   oci://ghcr.io/freinold/model2vec-serve/model2vec-serve \
-  --version 0.2.0 \
+  --version 0.3.0 \
   --set models[0]=minishlab/potion-multilingual-128M \
   --set apiKey=your-secret-key
 ```

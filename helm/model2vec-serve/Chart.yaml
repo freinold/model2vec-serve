@@ -3,7 +3,7 @@ name: model2vec-serve
 description: Lightweight OpenAI/TEI compatible model2vec embeddings server
 icon: https://raw.githubusercontent.com/freinold/model2vec-serve/main/docs/public/model2vec_logo.png
 type: application
-version: 0.2.0
-appVersion: "0.3.0"
+version: 0.3.0
+appVersion: "0.5.0"
 maintainers:
   - name: freinold
