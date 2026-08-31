@@ -27,6 +27,10 @@ pub enum AppError {
     #[error("model not found: {0}")]
     ModelNotFound(String),
 
+    /// The model addressed by a per-model route path does not exist.
+    #[error("no model is served at '/tei/{0}'")]
+    ModelRouteNotFound(String),
+
     /// An unexpected internal failure occurred.
     #[error("internal server error")]
     Internal,
@@ -45,6 +49,7 @@ impl IntoResponse for AppError {
             AppError::BadRequest(_) => (StatusCode::BAD_REQUEST, "invalid_request"),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized"),
             AppError::ModelNotFound(_) => (StatusCode::BAD_REQUEST, "model_not_found"),
+            AppError::ModelRouteNotFound(_) => (StatusCode::NOT_FOUND, "not_found"),
             AppError::ModelError(_) | AppError::Internal => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "internal_error")
             }

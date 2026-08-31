@@ -42,9 +42,17 @@ echo "$OUTPUT" | grep -q 'acme'
 
 # Chart metadata and default image reference are publish-ready.
 OUTPUT=$(render)
-echo "$OUTPUT" | grep -q 'helm.sh/chart: model2vec-serve-0.2.0'
-echo "$OUTPUT" | grep -q 'app.kubernetes.io/version: "0.3.0"'
-echo "$OUTPUT" | grep -q 'image: "ghcr.io/freinold/model2vec-serve:0.3.0"'
+echo "$OUTPUT" | grep -q 'helm.sh/chart: model2vec-serve-0.3.0'
+echo "$OUTPUT" | grep -q 'app.kubernetes.io/version: "0.5.0"'
+echo "$OUTPUT" | grep -q 'image: "ghcr.io/freinold/model2vec-serve:0.5.0"'
+
+# Model aliases render the MODEL_ALIAS env var as KEY=ALIAS pairs.
+OUTPUT=$(render \
+  --set modelAliases[0].key=minishlab/potion-base-2M \
+  --set modelAliases[0].alias=base \
+  --set modelAliases[1].key=minishlab/potion-multilingual-128M \
+  --set modelAliases[1].alias=multi)
+echo "$OUTPUT" | grep -q 'value: "minishlab/potion-base-2M=base,minishlab/potion-multilingual-128M=multi"'
 
 # Persistence is disabled by default: no PVC, no models volume, no HOME override.
 OUTPUT=$(render)

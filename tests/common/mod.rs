@@ -48,6 +48,7 @@ pub fn test_config(api_key: Option<String>) -> Config {
         models: vec![model.clone()],
         default_model: Some(model),
         model_owner: "minishlab".to_string(),
+        model_alias: Vec::new(),
         api_key,
         max_batch_size: 32,
         max_input_length: 512,
@@ -75,6 +76,30 @@ pub fn test_config_with_models(
         models,
         default_model,
         model_owner: "minishlab".to_string(),
+        model_alias: Vec::new(),
+        api_key,
+        max_batch_size: 32,
+        max_input_length: 512,
+        log_level: "warn".to_string(),
+        request_timeout_seconds: 30,
+    }
+}
+
+/// Build a test configuration with an explicit model list, default model,
+/// and per-model path aliases.
+pub fn test_config_with_aliases(
+    models: Vec<String>,
+    default_model: Option<String>,
+    model_alias: Vec<(String, String)>,
+    api_key: Option<String>,
+) -> Config {
+    Config {
+        host: "127.0.0.1".to_string(),
+        port: 0,
+        models,
+        default_model,
+        model_owner: "minishlab".to_string(),
+        model_alias,
         api_key,
         max_batch_size: 32,
         max_input_length: 512,
@@ -97,6 +122,19 @@ pub async fn test_app_with_models(
     api_key: Option<String>,
 ) -> axum::Router {
     let config = test_config_with_models(models, default_model, api_key);
+    let state = AppState::new(config, metrics_handle()).expect("failed to load model");
+    app(state)
+}
+
+/// Create an axum app for testing with explicit models, default model, and
+/// path aliases.
+pub async fn test_app_with_aliases(
+    models: Vec<String>,
+    default_model: Option<String>,
+    model_alias: Vec<(String, String)>,
+    api_key: Option<String>,
+) -> axum::Router {
+    let config = test_config_with_aliases(models, default_model, model_alias, api_key);
     let state = AppState::new(config, metrics_handle()).expect("failed to load model");
     app(state)
 }

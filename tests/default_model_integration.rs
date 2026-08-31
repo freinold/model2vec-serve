@@ -14,12 +14,15 @@ use axum::{
     http::{Request, StatusCode},
 };
 use clap::Parser;
+use common::{alt_model_dir, model_dir};
 use http_body_util::BodyExt;
 use metrics_exporter_prometheus::PrometheusHandle;
 use model2vec_serve::{config::Config, routes::app, state::AppState, telemetry};
 use serde_json::{Value, json};
 use std::sync::{Arc, OnceLock};
 use tower::ServiceExt;
+
+mod common;
 
 static METRICS: OnceLock<Arc<PrometheusHandle>> = OnceLock::new();
 
@@ -84,5 +87,58 @@ async fn default_model_loads_and_embeds_non_english_input() {
     assert!(
         !data[0]["embedding"].as_array().unwrap().is_empty(),
         "non-English input should produce a non-empty embedding"
+    );
+}
+
+#[tokio::test]
+async fn root_endpoints_remain_available_in_multi_model_deployment() {
+    let default_model = model_dir();
+    let alt_model = alt_model_dir();
+
+    let config = Config {
+        host: "127.0.0.1".to_string(),
+        port: 0,
+        models: vec![default_model.clone(), alt_model],
+        default_model: Some(default_model),
+        model_owner: "minishlab".to_string(),
+        model_alias: Vec::new(),
+        api_key: None,
+        max_batch_size: 32,
+        max_input_length: 512,
+        log_level: "warn".to_string(),
+        request_timeout_seconds: 30,
+    };
+
+    let state = AppState::new(config, metrics_handle()).expect("failed to load models");
+    let default_id = state.registry.default_model_id().to_string();
+    assert_ne!(
+        default_id, "alt-model",
+        "the first configured model should be the default"
+    );
+
+    let app = app(state);
+
+    let info_response = app
+        .clone()
+        .oneshot(Request::builder().uri("/info").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(info_response.status(), StatusCode::OK);
+    let info_body = info_response
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes();
+    let info: Value = serde_json::from_slice(&info_body).unwrap();
+    assert_eq!(
+        info["model_id"].as_str().unwrap(),
+        default_id,
+        "root /info should stay bound to the default model in a multi-model deployment"
+    );
+    assert_ne!(
+        info["model_id"].as_str().unwrap(),
+        "alt-model",
+        "root /info must not report the second model"
     );
 }

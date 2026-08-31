@@ -56,6 +56,14 @@ spec:
                   name: {{ include "model2vec-serve.fullname" . }}
                   key: api-key
                   optional: true
+            {{- if .Values.modelAliases }}
+            {{- $aliases := list }}
+            {{- range .Values.modelAliases }}
+            {{- $aliases = append $aliases (printf "%s=%s" .key .alias) }}
+            {{- end }}
+            - name: MODEL_ALIAS
+              value: {{ $aliases | join "," | quote }}
+            {{- end }}
             {{- if .Values.persistence.enabled }}
             - name: HOME
               value: {{ .Values.persistence.mountPath | quote }}

@@ -98,15 +98,41 @@ async fn tei_embed_without_model_uses_default() {
 }
 
 #[tokio::test]
-async fn tei_embed_with_model_query_param() {
-    let (app, state) = test_app_with_state(None).await;
-    let model_id = state.registry.default_model_id().to_string();
+async fn tei_embed_with_retired_model_qualifier_rejected() {
+    let app = test_app(None).await;
 
     let response = app
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri(format!("/embed?model={model_id}"))
+                .uri("/embed?model=minishlab/potion-base-2M")
+                .header("Content-Type", "application/json")
+                .body(Body::from(json!({"inputs": "hello"}).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let value: Value = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(value["error"], "invalid_request");
+    let message = value["message"].as_str().unwrap();
+    assert!(message.contains("model"));
+    assert!(message.contains("/tei/"));
+}
+
+#[tokio::test]
+async fn tei_embed_without_qualifier_still_serves_default() {
+    let app = test_app(None).await;
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/embed")
                 .header("Content-Type", "application/json")
                 .body(Body::from(json!({"inputs": "hello"}).to_string()))
                 .unwrap(),
@@ -149,16 +175,41 @@ async fn tei_info_without_model_uses_default() {
 }
 
 #[tokio::test]
-async fn tei_info_with_model_query_param() {
-    let (app, state) = test_app_with_state(None).await;
-    let model_id = state.registry.default_model_id().to_string();
+async fn tei_info_with_retired_model_qualifier_rejected() {
+    let app = test_app(None).await;
 
     let response = app
         .oneshot(
             Request::builder()
                 .method("GET")
-                .uri(format!("/info?model={model_id}"))
+                .uri("/info?model=minishlab/potion-base-2M")
                 .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let value: Value = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(value["error"], "invalid_request");
+}
+
+#[tokio::test]
+async fn tei_per_model_embed_returns_vectors() {
+    let (app, state) = test_app_with_state(None).await;
+    let model_id = state.registry.default_model_id().to_string();
+    let path_id = state.registry.path_identifier_for(&model_id).unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(format!("/tei/{path_id}/embed"))
+                .header("Content-Type", "application/json")
+                .body(Body::from(json!({"inputs": "hello"}).to_string()))
                 .unwrap(),
         )
         .await
@@ -169,18 +220,131 @@ async fn tei_info_with_model_query_param() {
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let value: Value = serde_json::from_slice(&body).unwrap();
 
-    assert_eq!(value["model_id"].as_str().unwrap(), model_id);
+    assert!(value.is_array());
+    assert_eq!(value.as_array().unwrap().len(), 1);
+    assert!(value[0].is_array());
 }
 
 #[tokio::test]
-async fn tei_embed_with_unknown_model_returns_error() {
+async fn tei_per_model_embed_preserves_input_order() {
+    let (app, state) = test_app_with_state(None).await;
+    let model_id = state.registry.default_model_id().to_string();
+    let path_id = state.registry.path_identifier_for(&model_id).unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(format!("/tei/{path_id}/embed"))
+                .header("Content-Type", "application/json")
+                .body(Body::from(
+                    json!({"inputs": ["one", "two", "three"]}).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let value: Value = serde_json::from_slice(&body).unwrap();
+
+    assert!(value.is_array());
+    let vectors = value.as_array().unwrap();
+    assert_eq!(vectors.len(), 3);
+    assert!(vectors.iter().all(Value::is_array));
+}
+
+#[tokio::test]
+async fn tei_per_model_embed_unknown_model_returns_404() {
     let app = test_app(None).await;
 
     let response = app
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/embed?model=unknown-model")
+                .uri("/tei/no-such-model/embed")
+                .header("Content-Type", "application/json")
+                .body(Body::from(json!({"inputs": "hello"}).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let value: Value = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(value["error"], "not_found");
+    assert!(value["message"].as_str().unwrap().contains("no-such-model"));
+}
+
+#[tokio::test]
+async fn tei_per_model_embed_empty_inputs_rejected() {
+    let (app, state) = test_app_with_state(None).await;
+    let model_id = state.registry.default_model_id().to_string();
+    let path_id = state.registry.path_identifier_for(&model_id).unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(format!("/tei/{path_id}/embed"))
+                .header("Content-Type", "application/json")
+                .body(Body::from(json!({"inputs": []}).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let value: Value = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(value["error"], "invalid_request");
+}
+
+#[tokio::test]
+async fn tei_per_model_embed_oversized_batch_rejected() {
+    let (app, state) = test_app_with_state(None).await;
+    let model_id = state.registry.default_model_id().to_string();
+    let path_id = state.registry.path_identifier_for(&model_id).unwrap();
+    let inputs: Vec<String> = (0..33).map(|i| format!("input-{i}")).collect();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(format!("/tei/{path_id}/embed"))
+                .header("Content-Type", "application/json")
+                .body(Body::from(json!({ "inputs": inputs }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let value: Value = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(value["error"], "invalid_request");
+}
+
+#[tokio::test]
+async fn tei_per_model_embed_with_model_qualifier_rejected() {
+    let (app, state) = test_app_with_state(None).await;
+    let model_id = state.registry.default_model_id().to_string();
+    let path_id = state.registry.path_identifier_for(&model_id).unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(format!("/tei/{path_id}/embed?model=x"))
                 .header("Content-Type", "application/json")
                 .body(Body::from(json!({"inputs": "hello"}).to_string()))
                 .unwrap(),
@@ -193,6 +357,164 @@ async fn tei_embed_with_unknown_model_returns_error() {
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let value: Value = serde_json::from_slice(&body).unwrap();
 
-    assert_eq!(value["error"], "model_not_found");
-    assert!(value["message"].as_str().unwrap().contains("unknown-model"));
+    assert_eq!(value["error"], "invalid_request");
+}
+
+#[tokio::test]
+async fn tei_per_model_embed_with_retired_qualifier_rejected() {
+    let app = test_app(None).await;
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/tei/no-such-model/embed?model=x")
+                .header("Content-Type", "application/json")
+                .body(Body::from(json!({"inputs": "hello"}).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let value: Value = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(value["error"], "invalid_request");
+}
+
+#[tokio::test]
+async fn tei_per_model_embed_with_empty_model_qualifier_rejected() {
+    let (app, state) = test_app_with_state(None).await;
+    let model_id = state.registry.default_model_id().to_string();
+    let path_id = state.registry.path_identifier_for(&model_id).unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(format!("/tei/{path_id}/embed?model="))
+                .header("Content-Type", "application/json")
+                .body(Body::from(json!({"inputs": "hello"}).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let value: Value = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(value["error"], "invalid_request");
+}
+
+#[tokio::test]
+async fn tei_per_model_info_returns_model_metadata() {
+    let (app, state) = test_app_with_state(None).await;
+    let model_id = state.registry.default_model_id().to_string();
+    let path_id = state.registry.path_identifier_for(&model_id).unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri(format!("/tei/{path_id}/info"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let value: Value = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(value["model_id"].as_str().unwrap(), model_id);
+    assert!(value["max_input_length"].is_u64());
+    assert!(value["embedding_dimension"].is_u64());
+    assert!(value["pooling"].is_string());
+}
+
+#[tokio::test]
+async fn tei_per_model_info_unknown_model_returns_404() {
+    let app = test_app(None).await;
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri("/tei/no-such-model/info")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let value: Value = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(value["error"], "not_found");
+    assert!(value["message"].as_str().unwrap().contains("no-such-model"));
+}
+
+#[tokio::test]
+async fn tei_per_model_info_matches_root_info_for_default() {
+    let (app, state) = test_app_with_state(None).await;
+    let model_id = state.registry.default_model_id().to_string();
+    let path_id = state.registry.path_identifier_for(&model_id).unwrap();
+
+    let per_model_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri(format!("/tei/{path_id}/info"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let root_response = app
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri("/info")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(per_model_response.status(), StatusCode::OK);
+    assert_eq!(root_response.status(), StatusCode::OK);
+
+    let per_model_body = per_model_response
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes();
+    let per_model: Value = serde_json::from_slice(&per_model_body).unwrap();
+
+    let root_body = root_response
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes();
+    let root: Value = serde_json::from_slice(&root_body).unwrap();
+
+    assert_eq!(per_model["model_id"], root["model_id"]);
+    assert_eq!(per_model["max_input_length"], root["max_input_length"]);
+    assert_eq!(
+        per_model["embedding_dimension"],
+        root["embedding_dimension"]
+    );
+    assert_eq!(per_model["pooling"], root["pooling"]);
 }

@@ -12,6 +12,7 @@ a corresponding environment variable.
 | `--model` | `MODEL` | `minishlab/potion-multilingual-128M` | Hugging Face model id or local path; repeatable |
 | `--default-model` | `DEFAULT_MODEL` | first `--model` | Model to use when a request does not specify one |
 | `--model-owner` | `MODEL_OWNER` | `minishlab` | Model publisher or owner shown in `/v1/models` responses |
+| `--model-alias` | `MODEL_ALIAS` | none | Path identifier alias for a model, as `KEY=ALIAS`; repeatable |
 | `--api-key` | `API_KEY` | none | Enables Bearer token authentication |
 | `--max-batch-size` | `MAX_BATCH_SIZE` | `256` | Maximum inputs per request |
 | `--max-input-length` | `MAX_INPUT_LENGTH` | `512` | Maximum tokens per input |
@@ -54,6 +55,37 @@ MODEL=minishlab/potion-multilingual-128M,minishlab/potion-code-16M-v2 \
 DEFAULT_MODEL=minishlab/potion-multilingual-128M \
 cargo run --release
 ```
+
+## Example: model aliases
+
+The `/tei/{model_id}/...` endpoints select a model by its path identifier. By
+default this is the last segment of the model identifier (e.g.
+`minishlab/potion-code-16M-v2` → `potion-code-16M-v2`). Override it with
+`--model-alias KEY=ALIAS`:
+
+```bash
+cargo run --release -- \
+  --model minishlab/potion-multilingual-128M \
+  --model /models/potion-code-16M-v2 \
+  --model-alias /models/potion-code-16M-v2=code \
+  --port 8080
+```
+
+The `MODEL_ALIAS` environment variable accepts multiple `KEY=ALIAS` pairs as a
+comma-separated list:
+
+```bash
+MODEL_ALIAS=/models/potion-code-16M-v2=code \
+cargo run --release
+```
+
+Rules:
+
+- `KEY` is the model identifier or local path exactly as configured via
+  `--model`.
+- `ALIAS` must be a single URL path segment (no slashes).
+- Two models resolving to the same path identifier abort startup with an error
+  hinting at `--model-alias`.
 
 ## Docker / Kubernetes
 

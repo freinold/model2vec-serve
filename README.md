@@ -7,7 +7,8 @@ models.
 ## Features
 
 - OpenAI-compatible `POST /v1/embeddings` and `GET /v1/models`
-- TEI-compatible `POST /embed` and `GET /info`
+- TEI-compatible `POST /embed` and `GET /info`, plus per-model
+  `POST /tei/{model_id}/embed` and `GET /tei/{model_id}/info`
 - Optional API key authentication
 - Health (`/health`, `/ready`) and metrics (`/metrics`) endpoints
 - Interactive OpenAPI documentation at `/docs`
@@ -49,6 +50,24 @@ curl -X POST http://localhost:8080/v1/embeddings \
   -d '{"input":"def hello(): pass","model":"minishlab/potion-code-16M-v2"}'
 ```
 
+## TEI per-model endpoints
+
+TEI clients serving multiple models address a model explicitly through
+`POST /tei/{model_id}/embed` and `GET /tei/{model_id}/info`. The `{model_id}`
+path segment is the model's `--model-alias` or, by default, the last segment of
+its identifier (e.g. `minishlab/potion-code-16M-v2` → `potion-code-16M-v2`).
+Root `/embed` and `/info` continue to serve the default model.
+
+**Breaking change in 0.5.0**: the `?model=` query parameter on `/embed` and
+`/info` was removed. Migrate as follows:
+
+| Before (≤ 0.3.x) | After (0.5.0) |
+|------------------|----------------|
+| `POST /embed?model=<id>` | `POST /tei/{model_id}/embed` |
+| `GET /info?model=<id>` | `GET /tei/{model_id}/info` |
+| `POST /embed` (default) | `POST /embed` (default, unchanged) |
+| `?model=` present | `400 invalid_request` |
+
 ## Configuration
 
 All configuration is passed as command-line arguments:
@@ -58,6 +77,7 @@ All configuration is passed as command-line arguments:
 | `--model` | `minishlab/potion-multilingual-128M` | Hugging Face model id or local path; repeatable |
 | `--default-model` | first `--model` | Model to use when a request does not specify one |
 | `--model-owner` | `minishlab` | Model publisher or owner shown in `/v1/models` responses |
+| `--model-alias` | none | Path identifier alias for a model, as `KEY=ALIAS`; repeatable |
 | `--host` | `0.0.0.0` | Bind address |
 | `--port` | `8080` | Listen port |
 | `--api-key` | none | Enables Bearer token authentication |
@@ -89,8 +109,8 @@ docker run -p 8080:8080 \
 Released images are published to GHCR:
 
 ```bash
-docker pull ghcr.io/freinold/model2vec-serve:v0.1.0
-docker run -p 8080:8080 -e MODEL=minishlab/potion-multilingual-128M ghcr.io/freinold/model2vec-serve:v0.1.0
+docker pull ghcr.io/freinold/model2vec-serve:v0.5.0
+docker run -p 8080:8080 -e MODEL=minishlab/potion-multilingual-128M ghcr.io/freinold/model2vec-serve:v0.5.0
 ```
 
 See [docs/deployment/docker.md](docs/deployment/docker.md) for the full release

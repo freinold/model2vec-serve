@@ -11,7 +11,7 @@ chart change:
 ```bash
 helm install model2vec-serve \
   oci://ghcr.io/freinold/model2vec-serve/model2vec-serve \
-  --version 0.2.0 \
+  --version 0.3.0 \
   --set models[0]=minishlab/potion-multilingual-128M \
   --set apiKey=your-secret-key
 ```
@@ -47,6 +47,21 @@ helm install model2vec-serve ./helm/model2vec-serve \
   --set apiKey=your-secret-key
 ```
 
+## Model path aliases
+
+The TEI per-model endpoints (`/tei/{model_id}/embed`, `/tei/{model_id}/info`)
+address models by a path identifier. Set `modelAliases` to override the path
+identifier of a model. Each entry's `key` must match a `models` entry (or its
+derived id); the `alias` becomes the `/tei/{alias}/...` path segment. Duplicate
+resolved path segments abort startup.
+
+```bash
+helm install model2vec-serve ./helm/model2vec-serve \
+  --set models[0]=minishlab/potion-multilingual-128M \
+  --set modelAliases[0].key=minishlab/potion-multilingual-128M \
+  --set modelAliases[0].alias=potion-multi
+```
+
 ## Uninstall
 
 ```bash
@@ -64,6 +79,7 @@ helm uninstall model2vec-serve
 | `models` | List of Hugging Face model ids or local paths | `[]` |
 | `defaultModel` | Default model when a request does not specify one (defaults to the first model in the list if omitted) | `""` |
 | `modelOwner` | Model publisher or owner shown in `/v1/models` responses | `"minishlab"` |
+| `modelAliases` | List of `{key, alias}` pairs overriding the `/tei/{model_id}/...` path segments; keys must match a `models` entry, duplicate resolved segments abort startup | `[]` |
 | `model` | (Deprecated) Hugging Face model id or local path | `minishlab/potion-multilingual-128M` |
 | `apiKey` | API key for authentication | `""` |
 | `args` | Extra CLI arguments | `[]` |
