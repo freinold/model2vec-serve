@@ -1,11 +1,15 @@
 #![allow(missing_docs)]
 #![allow(clippy::unwrap_used)]
 
+use axum::{body::Body, http::Request};
 use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use hf_hub::HFClientSync;
 use model2vec_serve::model::embedding::EmbeddingModel;
-use model2vec_serve::{config::Config, state::AppState, telemetry};
+use model2vec_serve::{config::Config, routes::app, state::AppState, telemetry};
+use serde_json::json;
 use std::sync::Arc;
+use tokio::runtime::Runtime;
+use tower::ServiceExt;
 
 const BENCH_MODEL: &str = "minishlab/potion-base-2M";
 
@@ -57,6 +61,10 @@ fn bench_embeddings(c: &mut Criterion) {
         .expect("default model must have a path identifier")
         .to_string();
 
+    let router = app(Arc::clone(&state));
+    let rt = Runtime::new().expect("failed to create tokio runtime for benchmark");
+    let request_body = json!({ "inputs": inputs }).to_string();
+
     let mut group = c.benchmark_group("embeddings");
     group.throughput(Throughput::Elements(inputs.len() as u64));
     group.bench_function("batch_of_64", |b| {
@@ -75,6 +83,36 @@ fn bench_embeddings(c: &mut Criterion) {
                 .model
                 .encode(&inputs, loaded.max_input_length, inputs.len());
             assert_eq!(result.len(), inputs.len());
+        });
+    });
+
+    let per_model_uri = format!("/tei/{path_id}/embed");
+    group.bench_function("http_root_batch_of_64", |b| {
+        b.iter(|| {
+            let request = Request::builder()
+                .method("POST")
+                .uri("/embed")
+                .header("Content-Type", "application/json")
+                .body(Body::from(request_body.clone()))
+                .expect("valid request");
+            let response = rt
+                .block_on(router.clone().oneshot(request))
+                .expect("response");
+            assert_eq!(response.status(), 200);
+        });
+    });
+    group.bench_function("http_per_model_batch_of_64", |b| {
+        b.iter(|| {
+            let request = Request::builder()
+                .method("POST")
+                .uri(&per_model_uri)
+                .header("Content-Type", "application/json")
+                .body(Body::from(request_body.clone()))
+                .expect("valid request");
+            let response = rt
+                .block_on(router.clone().oneshot(request))
+                .expect("response");
+            assert_eq!(response.status(), 200);
         });
     });
     group.finish();
