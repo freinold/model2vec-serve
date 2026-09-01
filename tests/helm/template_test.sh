@@ -44,6 +44,8 @@ echo "$OUTPUT" | grep -q 'acme'
 # values are derived from Chart.yaml so the test stays valid across automated
 # chart bumps (chart version mirrors the app version).
 CHART_VERSION="$(awk '/^version:/ {print $2}' "$CHART_DIR/Chart.yaml")"
+# The helm.sh/chart label sanitizes the version ("+" becomes "_").
+CHART_VERSION="${CHART_VERSION//+/_}"
 APP_VERSION="$(awk -F'"' '/^appVersion:/ {print $2}' "$CHART_DIR/Chart.yaml")"
 OUTPUT=$(render)
 echo "$OUTPUT" | grep -q "helm.sh/chart: model2vec-serve-${CHART_VERSION}"

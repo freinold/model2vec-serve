@@ -4,6 +4,12 @@ release = true
 # Maintain CHANGELOG.md in release PRs so releases carry changelog bodies.
 changelog_update = true
 changelog_path = "./CHANGELOG.md"
+# Only open release PRs for commits that change the served binary in a
+# meaningful way. Without this, every commit touching a packaged file (README
+# included - cargo auto-includes it) would open a release PR, and the
+# automated chart bump (which syncs the version strings in README.md) would
+# trigger the next release forever.
+release_commits = '^(feat|fix|perf|revert)!?(\(|:)|^chore\((deps)\)(\(|:)'
 
 [[package]]
 name = "model2vec-serve"

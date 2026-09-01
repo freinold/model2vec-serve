@@ -79,8 +79,11 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
           # PAT so the chart-bump commit triggers helm-release.yml and ci.yml
-          # (GITHUB_TOKEN pushes do not start new workflow runs).
+          # (GITHUB_TOKEN pushes do not start new workflow runs). The token is
+          # not persisted by checkout; scripts/bump_chart.sh scopes it to the
+          # single git push it performs.
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
 
       - name: Set up git user
@@ -109,13 +112,17 @@ jobs:
           echo "Waiting for a docker.yml run for ${tag} (${sha})"
           run_id=""
           for _ in $(seq 1 30); do
-            run_id="$(gh run list --workflow docker.yml --commit "$sha" \
-              --json databaseId --jq '.[0].databaseId // empty' || true)"
+            # Only the tag-triggered push run builds the semver image tag;
+            # a workflow_dispatch run for the same sha would not.
+            run_id="$(gh run list --workflow docker.yml --event push --commit "$sha" \
+              --json databaseId,headBranch \
+              --jq '.[] | "\(.databaseId) \(.headBranch)"' \
+              | awk -v t="${tag}" '$2 == t {print $1; exit}' || true)"
             [ -n "$run_id" ] && break
             sleep 10
           done
           if [ -z "$run_id" ]; then
-            echo "::error::No docker.yml run found for ${tag} after 5 minutes"
+            echo "::error::No docker.yml push run for ${tag} found after 5 minutes"
             exit 1
           fi
           gh run watch "$run_id" --exit-status --interval 30
@@ -123,4 +130,5 @@ jobs:
       - name: Bump chart and docs
         env:
           APP_VERSION: ${{ steps.app-version.outputs.version }}
+          RELEASE_PLZ_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
         run: bash scripts/bump_chart.sh
