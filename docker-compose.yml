@@ -1,0 +1,36 @@
+# Local deployment of model2vec-serve via Docker Compose.
+#
+# Starts the published image serving two models:
+#   - minishlab/potion-multilingual-128M (default)
+#   - minishlab/potion-code-16M-v2
+#
+# Copy .env.example to .env to customize; see docs/deployment/compose.md.
+# Validated offline by tests/compose/compose_config_test.sh.
+services:
+  model2vec-serve:
+    image: ${MODEL2VEC_IMAGE:-ghcr.io/freinold/model2vec-serve:latest}
+    container_name: model2vec-serve
+    environment:
+      # Comma-separated model list; the service splits on ','.
+      - MODEL=${MODEL:-minishlab/potion-multilingual-128M,minishlab/potion-code-16M-v2}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-minishlab/potion-multilingual-128M}
+      # hf-hub derives its cache from HOME, so downloads land in
+      # <cache-dir>/.cache/huggingface/hub on the host (same pattern as the
+      # Helm chart's persistence block).
+      - HOME=/models
+      # Optional service settings: short syntax passes them through only when
+      # set (shell or .env), so an unset variable never becomes an empty one
+      # (an empty API_KEY would enable auth with an empty Bearer token).
+      - API_KEY
+      - MODEL_OWNER
+      - MODEL_ALIAS
+      - MAX_BATCH_SIZE
+      - MAX_INPUT_LENGTH
+      - LOG_LEVEL
+      - REQUEST_TIMEOUT_SECONDS
+    ports:
+      - "${MODEL2VEC_PORT:-8080}:8080"
+    volumes:
+      - ${MODEL2VEC_CACHE_DIR:-./models}:/models
+    restart: unless-stopped
+    stop_grace_period: 30s
