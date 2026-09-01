@@ -10,6 +10,11 @@ name = "model2vec-serve"
 # Do not publish to crates.io; this is an application binary distributed as a
 # container image. The `publish = false` field in Cargo.toml is also respected.
 publish = false
+# Process this package via git only (tag + GitHub release). Without this flag
+# release-plz skips `publish = false` packages entirely: release PRs and
+# releases are only prepared for packages publishable to a registry or
+# explicitly marked git-only.
+git_only = true
 # Publish a GitHub release and tag for each release.
 git_release_enable = true
 git_tag_enable = true
