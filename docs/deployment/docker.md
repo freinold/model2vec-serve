@@ -9,8 +9,8 @@ runtime image.
 docker build -t model2vec-serve:latest .
 ```
 
-The build stage uses `rust:1.85-slim` and installs the native dependencies
-required by `model2vec-rs`. The runtime stage uses `debian:bookworm-slim` and
+The build stage uses `rust:1.98-slim` and installs the native dependencies
+required by `model2vec-rs`. The runtime stage uses `debian:trixie-slim` and
 only the compiled binary plus CA certificates.
 
 ## Run
@@ -53,6 +53,10 @@ docker run -p 8080:8080 \
   -e MODEL=/models/my-model \
   model2vec-serve:latest
 ```
+
+For serving multiple models locally with a persisted model cache and no manual
+`docker run` flags, see [Docker Compose](./compose.md): a ready-made two-model
+stack launched with a single `docker compose up -d` command.
 
 ## GitHub Container Registry
 

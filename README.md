@@ -14,6 +14,7 @@ models.
 - Interactive OpenAPI documentation at `/docs`
 - Structured JSON logs with request correlation IDs
 - Small, containerized Rust binary
+- One-command two-model local deployment via Docker Compose
 - Helm chart for Kubernetes deployment with volume mount support
 
 ## Quickstart
@@ -115,6 +116,23 @@ docker run -p 8080:8080 -e MODEL=minishlab/potion-multilingual-128M ghcr.io/frei
 
 See [docs/deployment/docker.md](docs/deployment/docker.md) for the full release
 and tagging strategy.
+
+## Docker Compose
+
+Run a local two-model stack (multilingual + code v2) with a persisted model
+cache using the published image:
+
+```bash
+docker compose up -d
+```
+
+The stack serves `minishlab/potion-multilingual-128M` (default) and
+`minishlab/potion-code-16M-v2`. Models download once into `./models` and
+survive restarts. Customize via `.env` (see `.env.example`).
+
+See [docs/deployment/compose.md](docs/deployment/compose.md) for the full
+guide, including prerequisites, volume mounting, configuration, and
+troubleshooting.
 
 ## Helm
 

@@ -46,6 +46,7 @@ export default defineConfig({
         text: 'Deployment',
         items: [
           { text: 'Docker', link: '/deployment/docker' },
+          { text: 'Docker Compose', link: '/deployment/compose' },
           { text: 'Helm', link: '/deployment/helm' },
         ],
       },

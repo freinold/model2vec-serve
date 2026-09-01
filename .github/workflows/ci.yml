@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -66,3 +69,12 @@ jobs:
       - name: Run chart-testing install
         if: "steps.list-changed.outputs.changed == 'true' && ! contains(env.COMMIT_MSG, '[skip install]')"
         run: ct install --target-branch ${{ github.event.repository.default_branch }} --debug
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Validate Docker Compose configuration
+        run: bash tests/compose/compose_config_test.sh

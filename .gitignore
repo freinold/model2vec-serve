@@ -251,6 +251,9 @@ Thumbs.db
 # Docker / Helm
 *.tgz
 
+# Docker Compose model download cache (bind-mounted at /models, HOME=/models)
+models/
+
 # VitePress documentation
 docs/node_modules/
 docs/.vitepress/dist/
