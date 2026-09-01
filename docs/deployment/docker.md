@@ -54,6 +54,10 @@ docker run -p 8080:8080 \
   model2vec-serve:latest
 ```
 
+For serving multiple models locally with a persisted model cache and no manual
+`docker run` flags, see [Docker Compose](./compose.md): a ready-made two-model
+stack launched with a single `docker compose up -d` command.
+
 ## GitHub Container Registry
 
 Pre-built images are published to the GitHub Container Registry (GHCR) on every
