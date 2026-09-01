@@ -41,13 +41,13 @@ The ghcr.io helm package must be public for anonymous installs (one-time maintai
 
 **Flow** (implemented by `scripts/bump_chart.sh`):
 
-1. Wait for the `docker.yml` run of the release tag to succeed (the chart's `appVersion` must point at an existing image before `ct install` validates it).
-2. Set `Chart.yaml` `version` to the app version (mirrored); if a chart with that version was already published (existing `model2vec-serve-<version>` tag), increment the patch until free.
-3. Set `Chart.yaml` `appVersion` to the app version (bare semver — the image tag consumed by `image.tag | default .Chart.AppVersion`).
-4. Update the `--version` install commands in `docs/deployment/helm.md`, `README.md`, and `helm/model2vec-serve/README.md`.
-5. `helm lint` the chart, commit as `chore(helm): release chart <version> with appVersion <appVersion>`, and push to main with the release PAT (GITHUB_TOKEN pushes do not trigger workflows).
+1. Wait for the `docker.yml` push run of the release tag to succeed (the chart's `appVersion` must point at an existing image before `ct install` validates it).
+2. Collision policy: if the published chart at the app version already has that `appVersion` (same app release, e.g. a job re-run), no-op; if the version was taken by a chart-only hotfix for a different app version, increment the patch until free.
+3. Set `Chart.yaml` `version` to the (possibly incremented) chart version and `appVersion` to the app version (bare semver — the image tag consumed by `image.tag | default .Chart.AppVersion`).
+4. Update all live version examples: the `--version` install commands in `docs/deployment/helm.md`, `README.md`, `helm/model2vec-serve/README.md`, `specs/004-helm-chart-enhancements/contracts/publishing.md`, and the docker image tags (`:v<app-version>`) in `README.md`.
+5. `helm lint` the chart, commit as `chore(helm): release chart <version> with appVersion <appVersion>`, and push to main with the release PAT scoped to that single push (`persist-credentials: false` on checkout; GITHUB_TOKEN pushes do not trigger workflows).
 
-The push triggers `helm-release.yml` (helm/** path filter), publishing the chart. The Cargo.toml `exclude` list keeps Chart.yaml and docs out of the cargo package so the chart bump does not trigger another app release.
+The push triggers `helm-release.yml` (helm/** path filter), publishing the chart. The `chore(helm)` commit never triggers another release: Cargo.toml `exclude` keeps Chart.yaml and docs out of the cargo package, and `.release-plz.toml` `release_commits` restricts release PRs to `feat`/`fix`/`perf`/`revert` and `chore(deps)` commits.
 
 ## Chart CI (in existing `ci.yml` `helm` job)
 

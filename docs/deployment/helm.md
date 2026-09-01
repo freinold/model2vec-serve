@@ -205,11 +205,15 @@ helm install model2vec-serve ./helm/model2vec-serve \
 The chart version mirrors the app version and is released automatically:
 after release-plz merges an app release (git tag + GitHub release + docker
 image), the `helm-chart-bump` job in `.github/workflows/release.yml` sets
-`Chart.yaml` `version`/`appVersion` and the documented install commands via
-`scripts/bump_chart.sh`, pushes to main, and `helm-release.yml` publishes the
-chart to GHCR. Chart-only changes between app releases can be released
-manually by bumping `Chart.yaml`; versions whose
-`model2vec-serve-<version>` tag already exists are skipped by the automation.
+`Chart.yaml` `version`/`appVersion` and all live version examples (install
+commands, README docker tags) via `scripts/bump_chart.sh`, pushes to main,
+and `helm-release.yml` publishes the chart to GHCR. The job is safe to
+re-run: if the published chart at the app version already has that
+`appVersion`, it no-ops; if the version was taken by a chart-only hotfix for
+a different app version, it increments the patch until free. App releases
+themselves are only prepared for `feat`/`fix`/`perf`/`revert` and
+`chore(deps)` commits (`release_commits` in `.release-plz.toml`), so the
+chart bump never triggers another release.
 
 ## See also
 
