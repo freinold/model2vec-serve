@@ -61,6 +61,7 @@ Key capabilities:
 │   ├── compose/                    # Docker Compose config validation
 │   └── helm/                       # Helm lint/template scripts
 ├── benches/                        # Criterion benchmarks
+├── scripts/                        # Release automation helpers (bump_chart.sh)
 ├── docs/                           # VitePress documentation site
 ├── .env.example                    # Example env for docker compose
 ├── Dockerfile
@@ -227,7 +228,9 @@ docker compose up -d
   `ingress.extraLabels`.
 - Install: `helm install model2vec-serve ./helm/model2vec-serve --set models=...`
 - Published OCI chart: helm install model2vec-serve oci://ghcr.io/freinold/model2vec-serve/model2vec-serve --version <chart-version>
-- Chart publishing: .github/workflows/helm-release.yml runs chart-releaser + helm push to ghcr.io on helm/** changes to main; Chart.yaml version must be bumped for a release to be cut (enforced by ct lint in CI).
+- Chart publishing: .github/workflows/helm-release.yml runs chart-releaser + helm push to ghcr.io on helm/** changes to main; chart-releaser only publishes versions that do not exist yet.
+- Automated chart releases: the chart version mirrors the app version. After each app release, the helm-chart-bump job in .github/workflows/release.yml (via scripts/bump_chart.sh) sets Chart.yaml version/appVersion and the documented install commands, and pushes to main, which triggers helm-release.yml. Chart-only changes can be released manually by bumping Chart.yaml directly; the automation skips versions whose model2vec-serve-<version> tag already exists.
+- Release detection scope: Cargo.toml `exclude` keeps non-Rust paths (docs, helm, specs, CI) out of the cargo package so commits touching only those files do not open release PRs; this is what prevents the chart bump from re-triggering releases.
 - Chart CI: ct lint + ct install (kind) run on PRs that change helm/**; skip the install test with [skip install] in the commit message.
 - Volume-mounted models are supported via `extraVolumes` / `extraVolumeMounts`.
 - An optional PVC for the model download cache is supported via the persistence block (sets HOME to the mount path; an operator-supplied HOME env wins).

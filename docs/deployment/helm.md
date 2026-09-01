@@ -6,12 +6,14 @@ Kubernetes.
 ## Install from the OCI registry
 
 The chart is published to the GitHub Container Registry on every versioned
-chart change:
+chart change. Chart releases are automated: the chart version mirrors the app
+version, and every app release automatically bumps and publishes a matching
+chart (see the [release automation](#release-automation) section):
 
 ```bash
 helm install model2vec-serve \
   oci://ghcr.io/freinold/model2vec-serve/model2vec-serve \
-  --version 0.3.0 \
+  --version 0.5.1 \
   --set models[0]=minishlab/potion-multilingual-128M \
   --set apiKey=your-secret-key
 ```
@@ -74,7 +76,7 @@ helm uninstall model2vec-serve
 |-----------|-------------|---------|
 | `replicaCount` | Number of replicas | `1` |
 | `image.repository` | Container image repository | `ghcr.io/freinold/model2vec-serve` |
-| `image.tag` | Container image tag | `0.3.0` |
+| `image.tag` | Container image tag | `""` (falls back to `appVersion`) |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `models` | List of Hugging Face model ids or local paths | `[]` |
 | `defaultModel` | Default model when a request does not specify one (defaults to the first model in the list if omitted) | `""` |
@@ -197,6 +199,17 @@ helm install model2vec-serve ./helm/model2vec-serve \
   --set autoscaling.minReplicas=2 \
   --set autoscaling.maxReplicas=10
 ```
+
+## Release automation
+
+The chart version mirrors the app version and is released automatically:
+after release-plz merges an app release (git tag + GitHub release + docker
+image), the `helm-chart-bump` job in `.github/workflows/release.yml` sets
+`Chart.yaml` `version`/`appVersion` and the documented install commands via
+`scripts/bump_chart.sh`, pushes to main, and `helm-release.yml` publishes the
+chart to GHCR. Chart-only changes between app releases can be released
+manually by bumping `Chart.yaml`; versions whose
+`model2vec-serve-<version>` tag already exists are skipped by the automation.
 
 ## See also
 

@@ -40,11 +40,15 @@ echo "$OUTPUT" | grep -q -- '- --default-model$'
 echo "$OUTPUT" | grep -q -- '- --model-owner$'
 echo "$OUTPUT" | grep -q 'acme'
 
-# Chart metadata and default image reference are publish-ready.
+# Chart metadata and default image reference are publish-ready. The expected
+# values are derived from Chart.yaml so the test stays valid across automated
+# chart bumps (chart version mirrors the app version).
+CHART_VERSION="$(awk '/^version:/ {print $2}' "$CHART_DIR/Chart.yaml")"
+APP_VERSION="$(awk -F'"' '/^appVersion:/ {print $2}' "$CHART_DIR/Chart.yaml")"
 OUTPUT=$(render)
-echo "$OUTPUT" | grep -q 'helm.sh/chart: model2vec-serve-0.3.0'
-echo "$OUTPUT" | grep -q 'app.kubernetes.io/version: "0.5.0"'
-echo "$OUTPUT" | grep -q 'image: "ghcr.io/freinold/model2vec-serve:0.5.0"'
+echo "$OUTPUT" | grep -q "helm.sh/chart: model2vec-serve-${CHART_VERSION}"
+echo "$OUTPUT" | grep -q "app.kubernetes.io/version: \"${APP_VERSION}\""
+echo "$OUTPUT" | grep -q "image: \"ghcr.io/freinold/model2vec-serve:${APP_VERSION}\""
 
 # Model aliases render the MODEL_ALIAS env var as KEY=ALIAS pairs.
 OUTPUT=$(render \

@@ -9,7 +9,7 @@ The chart is published to the GitHub Container Registry on every versioned chart
 ```bash
 helm install model2vec-serve \
   oci://ghcr.io/freinold/model2vec-serve/model2vec-serve \
-  --version 0.3.0 \
+  --version 0.5.1 \
   --set models[0]=minishlab/potion-multilingual-128M \
   --set apiKey=your-secret-key
 ```
