@@ -30,10 +30,24 @@
 ```bash
 helm install model2vec-serve \
   oci://ghcr.io/freinold/model2vec-serve/model2vec-serve \
-  --version 0.2.0
+  --version 0.5.1
 ```
 
 The ghcr.io helm package must be public for anonymous installs (one-time maintainer action; see spec Assumptions).
+
+## Automated chart release (`release.yml` `helm-chart-bump` job)
+
+**Trigger**: successful completion of the `release-plz-release` job with `releases_created == true` (i.e. release-plz published a new app release).
+
+**Flow** (implemented by `scripts/bump_chart.sh`):
+
+1. Wait for the `docker.yml` run of the release tag to succeed (the chart's `appVersion` must point at an existing image before `ct install` validates it).
+2. Set `Chart.yaml` `version` to the app version (mirrored); if a chart with that version was already published (existing `model2vec-serve-<version>` tag), increment the patch until free.
+3. Set `Chart.yaml` `appVersion` to the app version (bare semver — the image tag consumed by `image.tag | default .Chart.AppVersion`).
+4. Update the `--version` install commands in `docs/deployment/helm.md`, `README.md`, and `helm/model2vec-serve/README.md`.
+5. `helm lint` the chart, commit as `chore(helm): release chart <version> with appVersion <appVersion>`, and push to main with the release PAT (GITHUB_TOKEN pushes do not trigger workflows).
+
+The push triggers `helm-release.yml` (helm/** path filter), publishing the chart. The Cargo.toml `exclude` list keeps Chart.yaml and docs out of the cargo package so the chart bump does not trigger another app release.
 
 ## Chart CI (in existing `ci.yml` `helm` job)
 

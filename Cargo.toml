@@ -7,6 +7,30 @@ authors = ["freinold"]
 license = "MIT"
 description = "Lightweight OpenAI and TEI compatible embeddings server for model2vec models"
 repository = "https://github.com/freinold/model2vec-serve"
+# Keep release detection scoped to the Rust package: release-plz opens a
+# release PR when any packaged file changes. Without these excludes, commits
+# touching docs, Helm charts, or CI would trigger releases — including the
+# automated chart bump, which would loop forever.
+exclude = [
+    "/.dockerignore",
+    "/.env.example",
+    "/.github",
+    "/.gitignore",
+    "/.helmignore",
+    "/.opencode",
+    "/.release-plz.toml",
+    "/.specify",
+    "/AGENTS.md",
+    "/CHANGELOG.md",
+    "/cr.yaml",
+    "/ct.yaml",
+    "/docker-compose.yml",
+    "/docs",
+    "/helm",
+    "/scripts",
+    "/specs",
+    "/tests",
+]
 
 [[bin]]
 name = "model2vec-serve"
