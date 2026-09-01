@@ -9,8 +9,8 @@ runtime image.
 docker build -t model2vec-serve:latest .
 ```
 
-The build stage uses `rust:1.85-slim` and installs the native dependencies
-required by `model2vec-rs`. The runtime stage uses `debian:bookworm-slim` and
+The build stage uses `rust:1.98-slim` and installs the native dependencies
+required by `model2vec-rs`. The runtime stage uses `debian:trixie-slim` and
 only the compiled binary plus CA certificates.
 
 ## Run

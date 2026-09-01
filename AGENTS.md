@@ -58,10 +58,13 @@ Key capabilities:
 │   ├── *_integration.rs            # End-to-end integration tests
 │   ├── config_unit.rs              # Configuration unit tests
 │   ├── common/mod.rs               # Shared test helpers
+│   ├── compose/                    # Docker Compose config validation
 │   └── helm/                       # Helm lint/template scripts
 ├── benches/                        # Criterion benchmarks
 ├── docs/                           # VitePress documentation site
+├── .env.example                    # Example env for docker compose
 ├── Dockerfile
+├── docker-compose.yml              # Docker Compose deployment
 ├── Cargo.toml
 └── rustfmt.toml
 ```
@@ -85,6 +88,9 @@ cargo clippy --all-targets --all-features -- -D warnings
 
 # Run benchmarks
 cargo bench
+
+# Validate docker-compose.yml offline (docker compose config, no image pull)
+bash tests/compose/compose_config_test.sh
 
 # Run the service locally with one model
 cargo run --release -- --model minishlab/potion-multilingual-128M --port 8080
@@ -193,10 +199,23 @@ VitePress docs in `docs/` when endpoint behavior changes.
 
 ### Docker
 
-- Multi-stage build: `rust:1.85-slim` builder → `debian:bookworm-slim` runtime.
+- Multi-stage build: `rust:1.98-slim` builder → `debian:trixie-slim` runtime.
 - Final image exposes port `8080` and runs `model2vec-serve`.
 - Build: `docker build -t model2vec-serve:latest .`
 - Run: `docker run -p 8080:8080 -e MODEL=minishlab/potion-multilingual-128M model2vec-serve:latest`
+
+### Docker Compose
+
+- `docker-compose.yml` runs the published image with two models and a persisted
+  model cache in `./models` (same pattern as the Helm persistence block).
+- Launch:
+
+```bash
+docker compose up -d
+```
+
+- Customization variables are documented in `.env.example`.
+- Details: `docs/deployment/compose.md`.
 
 ### Helm
 
