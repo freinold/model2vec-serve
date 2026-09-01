@@ -74,5 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Validate Docker Compose configuration
         run: bash tests/compose/compose_config_test.sh

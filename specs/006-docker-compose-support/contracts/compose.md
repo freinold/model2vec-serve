@@ -22,12 +22,21 @@ the deployment packaging is defined here.
    `build:` context as the default path (FR-002).
 2. **MUST** set `MODEL` to
    `${MODEL:-minishlab/potion-multilingual-128M,minishlab/potion-code-16M-v2}`
-   (FR-001) and ensure the multilingual id is the effective default model
-   (explicit `DEFAULT_MODEL` pass-through defaulting to the same id, FR-007).
+   (FR-001) with the multilingual id as the **first** entry, and pass
+   `DEFAULT_MODEL` through with short syntax only (no compose-level default).
+   The effective default model is `DEFAULT_MODEL` when set, otherwise the
+   first `MODEL` entry (service fallback, `src/config.rs`) — this keeps the
+   default always inside the selected `MODEL` set (FR-007): the multilingual
+   model is the default exactly as long as it stays the first entry, and an
+   overridden `MODEL` can never inherit an out-of-set `DEFAULT_MODEL`.
 3. **MUST** mount `${MODEL2VEC_CACHE_DIR:-./models}` at `/models` and set the
    container env `HOME=/models` (FR-003). `HF_HOME` **MUST NOT** be used
-   (ineffective with hf-hub 0.4.3 sync API — see research).
-4. **MUST** map ports as `"${MODEL2VEC_PORT:-8080}:8080"` (FR-005).
+   (ineffective with hf-hub 0.4.3 sync API — see research). The override
+   covers host paths only: a named Docker volume requires editing this file
+   (compose rejects short-syntax references to undeclared volume names).
+4. **MUST** map ports as `"127.0.0.1:${MODEL2VEC_PORT:-8080}:8080"` (FR-005):
+   loopback-only by default; exposing beyond localhost is an explicit
+   compose-file edit.
 5. **MUST** set `restart: unless-stopped` and `stop_grace_period: 30s`
    (FR-008, FR-013).
 6. **MUST** pass optional service variables using short syntax
@@ -62,6 +71,9 @@ rules:
 
 - Service env names pass through **verbatim** (`MODEL`, `API_KEY`, …) — the
   compose layer introduces no renamed aliases for service settings.
+  `DEFAULT_MODEL` is an optional short-syntax pass-through: unset means "first
+  `MODEL` entry" (service fallback), which guarantees the default model is
+  always inside the selected `MODEL` set.
 - Compose-level knobs use the `MODEL2VEC_` prefix (`MODEL2VEC_IMAGE`,
   `MODEL2VEC_PORT`, `MODEL2VEC_CACHE_DIR`) and never enter the container
   environment.
@@ -71,18 +83,20 @@ rules:
 
 ## Rendered-config invariants (test-enforced)
 
-`tests/compose/compose_config_test.sh` runs `docker compose config` and
-asserts:
+`tests/compose/compose_config_test.sh` runs `docker compose --env-file /dev/null
+config` (independent of any repo `.env`) and asserts:
 
-- `MODEL` contains exactly `minishlab/potion-multilingual-128M` and
+- `MODEL` contains exactly `minishlab/potion-multilingual-128M` (first entry =
+  effective default via the service's first-entry fallback) and
   `minishlab/potion-code-16M-v2` in the default path.
-- Effective `DEFAULT_MODEL` is `minishlab/potion-multilingual-128M`.
+- `DEFAULT_MODEL` **absent** when unset (fallback rule); passed through
+  verbatim when set.
 - `HOME: /models` present; `HF_HOME` absent.
 - `API_KEY` (and other optional vars) **absent** when unset; present verbatim
   when set via `.env` (script sets a probe value and re-renders).
 - Volume source defaults to `./models`, target `/models`.
-- Port mapping `8080:8080` by default; honored override when
-  `MODEL2VEC_PORT` is set.
+- Port mapping `127.0.0.1:8080→8080` by default (loopback host binding);
+  honored `MODEL2VEC_PORT` override keeps the loopback binding.
 - `restart: unless-stopped` present; no `version:` key present.
 
 ## Interaction with existing behavior

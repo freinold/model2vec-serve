@@ -70,12 +70,14 @@ Docker toolchain.
 ## Decision: Health check mechanism
 
 - **Decision**: Add `curl` to the Dockerfile **runtime** stage and define
-  `HEALTHCHECK CMD curl -fsS http://127.0.0.1:8080/health || exit 1` (with
-  `--start-interval`-style defaults: 30 s interval, 5 s timeout, 3 retries, 30 s
-  start period) in the Dockerfile. The compose service inherits the image
-  health check automatically (no duplication in `docker-compose.yml`), which
-  also benefits plain `docker run` users (FR-008).
-- **Rationale**: The runtime base `debian:bookworm-slim` ships neither `curl`
+  `HEALTHCHECK --interval=30s --timeout=5s --start-period=300s --retries=3
+  CMD curl -fsS http://127.0.0.1:8080/health || exit 1` in the Dockerfile.
+  After the 300 s start period, three consecutive failed checks (30 s
+  interval) mark the service unhealthy within ~90 s. The compose service
+  inherits the image health check automatically (no duplication in
+  `docker-compose.yml`), which also benefits plain `docker run` users
+  (FR-008).
+- **Rationale**: The runtime base `debian:trixie-slim` ships neither `curl`
   nor `wget`, so the compose file cannot HTTP-probe the published image as-is
   (Kubernetes probes run from the kubelet, which is why Helm never needed an
   in-image tool). `curl` costs ~10 MB against an image whose payload is
@@ -83,7 +85,7 @@ Docker toolchain.
   unauthenticated). Startup includes model downloads, so a generous start
   period prevents false negatives on first launch.
 - **Alternatives considered**:
-  - `bash /dev/tcp` raw TCP check (bash exists in bookworm-slim) — no image
+  - `bash /dev/tcp` raw TCP check (bash exists in trixie-slim) — no image
     change, but arcane, TCP-only, and fragile across base-image updates;
     rejected per Complexity Tracking.
   - Compose-level health check in `docker-compose.yml` — duplicates the image

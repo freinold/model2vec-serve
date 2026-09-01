@@ -22,7 +22,7 @@ API behavior changes.
 
 **Language/Version**: Rust 1.98 (image builder, MSRV 1.85 — unchanged); Docker Compose Spec targeting Compose v2 CLI (verified against Docker Compose v5.5.0)
 
-**Primary Dependencies**: `ghcr.io/freinold/model2vec-serve` published image (built by `.github/workflows/docker.yml` on releases; tags `latest`, `<semver>`, `sha-`); existing service env configuration (`src/config.rs`: `MODEL`, `DEFAULT_MODEL`, `API_KEY`, `MAX_BATCH_SIZE`, `MAX_INPUT_LENGTH`, `LOG_LEVEL`, `REQUEST_TIMEOUT_SECONDS`, `MODEL_OWNER`, `MODEL_ALIAS`); runtime base `debian:bookworm-slim`
+**Primary Dependencies**: `ghcr.io/freinold/model2vec-serve` published image (built by `.github/workflows/docker.yml` on releases; tags `latest`, `<semver>`, `sha-`); existing service env configuration (`src/config.rs`: `MODEL`, `DEFAULT_MODEL`, `API_KEY`, `MAX_BATCH_SIZE`, `MAX_INPUT_LENGTH`, `LOG_LEVEL`, `REQUEST_TIMEOUT_SECONDS`, `MODEL_OWNER`, `MODEL_ALIAS`); runtime base `debian:trixie-slim` (pinned by OCI index digest)
 
 **Storage**: Host bind-mount directory (default `./models`) mounted at `/models` with `HOME=/models`, so the model cache lands in `models/.cache/huggingface/hub` — identical to the Helm persistence pattern (`hf-hub` 0.4.3 sync API ignores `HF_HOME`; `dirs::home_dir()` reads `HOME` first; see `specs/004-helm-chart-enhancements/research.md`)
 
@@ -30,7 +30,7 @@ API behavior changes.
 
 **Target Platform**: Developer workstations with Docker (Linux, macOS, Windows via Docker Desktop); amd64 (image platform published by `docker.yml`)
 
-**Performance Goals**: Warm-cache restart reaches readiness in < 30 s (disk model load only, no downloads); unhealthy state detected by health check within ≤ 30 s (interval + retries); first-launch download time is network-bound and out of scope
+**Performance Goals**: Warm-cache restart reaches readiness in < 30 s (disk model load only, no downloads); unhealthy state detected by the health check within ~90 s (three consecutive failed checks at a 30 s interval, after the 300 s start period); first-launch download time is network-bound and out of scope
 
 **Constraints**: No new runtime dependencies beyond `curl` in the Dockerfile runtime stage (for the health check); compose file must work with the published image (no local build step); service API/error contract unchanged (FR-014)
 
@@ -46,7 +46,7 @@ API behavior changes.
 | II. Test Coverage | PASS | New automated test (`tests/compose/compose_config_test.sh`) validates the deployment contract (two models, default model, `HOME`, volume, health check, restart policy) and fails before the change (no compose file exists); no Rust/Python code touched so coverage percentages unaffected; contract tests unaffected (FR-014) |
 | III. API Conformity | PASS | No endpoints, response shapes, or error codes changed; service started by compose is byte-identical to the service documented in existing contracts |
 | IV. Simplicity Over Complexity | PASS | Single compose service reusing the service's existing env configuration (no new abstraction); one container serving both models rather than two containers; two justified deviations recorded in Complexity Tracking (curl in runtime image; short-syntax env pass-through) |
-| V. Performance Focus | PASS | Deployment-level performance goals defined (warm restart < 30 s to ready; health-check detection ≤ 30 s); no hot-path code changed, so no new benchmarks required — justified in Complexity Tracking |
+| V. Performance Focus | PASS | Deployment-level performance goals defined (warm restart < 30 s to ready; health-check failure detection ~90 s after the 300 s start period); no hot-path code changed, so no new benchmarks required — justified in Complexity Tracking |
 
 **Post-Phase-1 re-check**: All gates still PASS. Phase 1 contracts fixed the
 env-var surface (`contracts/compose.md`) and documentation requirements

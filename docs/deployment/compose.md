@@ -30,7 +30,9 @@ docker compose logs -f model2vec-serve   # Ctrl+C once you see the startup-compl
 The first start downloads both models before the service becomes healthy; the
 health check allows a five-minute start period to cover that. The health status
 shown by `docker compose ps` comes from the `HEALTHCHECK` baked into the image
-(a `curl` probe against `/health`).
+(a `curl` probe against `/health`). The host port is bound to `127.0.0.1`, so
+the service is only reachable from your machine — edit the `ports` mapping in
+`docker-compose.yml` if you intentionally want other hosts to reach it.
 
 > **Note**: images published **before** the release that introduced compose
 > support carry no in-image health check. With such an image the health column
@@ -93,8 +95,10 @@ Both the model set and the default are overridable without touching
 
 - `MODEL` — comma-separated Hugging Face model ids (or local model directories)
   to serve. Setting it replaces the default two-model list entirely.
-- `DEFAULT_MODEL` — model answering requests without an explicit model. It must
-  be one of the ids in `MODEL`.
+- `DEFAULT_MODEL` — model answering requests without an explicit model. When
+  unset, the **first `MODEL` entry** serves default requests, so an overridden
+  `MODEL` list never ends up with an out-of-set default. When set, it must be
+  one of the ids in `MODEL`.
 
 For example, serving a single smaller model:
 
@@ -135,7 +139,9 @@ ls /tmp/m2v-cache/.cache/huggingface/hub
 ```
 
 If you prefer a Docker-managed named volume over a host bind mount, replace the
-service's volume entry with a named volume and declare it:
+service's volume entry with a named volume and declare it (the
+`MODEL2VEC_CACHE_DIR` override covers host paths only — compose rejects an
+undeclared volume name):
 
 ```yaml
 services:
@@ -167,11 +173,11 @@ are never injected into the container as empty strings.
 | Variable | Scope | Default | Effect when set |
 |----------|-------|---------|-----------------|
 | `MODEL2VEC_IMAGE` | compose | `ghcr.io/freinold/model2vec-serve:latest` | Use another image tag or a locally built image |
-| `MODEL2VEC_PORT` | compose | `8080` | Host port the service is reachable on |
-| `MODEL2VEC_CACHE_DIR` | compose | `./models` | Host directory for the model cache |
+| `MODEL2VEC_PORT` | compose | `8080` | Host port the service is reachable on (the host side is bound to `127.0.0.1`; edit the ports mapping in `docker-compose.yml` to expose beyond localhost) |
+| `MODEL2VEC_CACHE_DIR` | compose | `./models` | Host directory for the model cache (host paths only; a named volume requires editing `docker-compose.yml`) |
 | `MODEL` | service | two-model list (see *Served models* above) | Replace the served model set (comma-separated) |
-| `DEFAULT_MODEL` | service | `minishlab/potion-multilingual-128M` | Model answering requests without an explicit model |
-| `API_KEY` | service | *(unset → auth off)* | Enables Bearer auth on embedding endpoints; health/ready/metrics stay public |
+| `DEFAULT_MODEL` | service | first `MODEL` entry | Model answering requests without an explicit model; must be one of `MODEL` |
+| `API_KEY` | service | *(unset → auth off)* | Enables Bearer auth on all embedding and model-list endpoints (`/v1/embeddings`, `/v1/models`, `/embed`, `/info`, `/tei/{model_id}/embed`, `/tei/{model_id}/info`); `/health`, `/ready`, and `/metrics` stay public |
 | `MODEL_OWNER` | service | `minishlab` (service default) | Owner shown in `/v1/models` |
 | `MODEL_ALIAS` | service | *(unset)* | `KEY=ALIAS` pairs for `/tei/{model_id}/...` paths |
 | `MAX_BATCH_SIZE` | service | `256` (service default) | Max inputs per request |

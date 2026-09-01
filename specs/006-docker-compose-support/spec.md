@@ -73,8 +73,8 @@ delivers restart persistence and offline start capability.
    starts it again with no network access, **Then** the service still becomes
    ready and serves both models.
 4. **Given** a developer who prefers to manage model storage themselves, **When**
-   they change the documented storage setting to a different host path (or a
-   named volume), **Then** the service uses that location without other changes.
+   they change the documented storage setting to a different host path, **Then**
+   the service uses that location without other changes.
 
 ---
 
@@ -171,7 +171,9 @@ onboarding path.
   container for model storage, so downloaded model artifacts persist across
   container recreation and restarts.
 - **FR-004**: The compose deployment MUST allow the model storage location to
-  be changed (different host path or named volume) through documented settings.
+  be changed to a different host path through documented settings (switching
+  to a named Docker volume is possible via a compose-file edit, documented,
+  but is not an environment-only override).
 - **FR-005**: The compose deployment MUST expose the service on a documented
   default host port, overridable without editing the compose file.
 - **FR-006**: The compose deployment MUST support enabling API-key protection
@@ -208,9 +210,10 @@ onboarding path.
   the service container is launched locally — image reference, served model
   set, default model, host port mapping, model storage mount, health check,
   restart policy, and customization settings.
-- **Model storage location**: The host-side directory (or named volume) that
-  holds downloaded model artifacts; persists across restarts; created
-  automatically on first launch.
+- **Model storage location**: The host-side directory that holds downloaded
+  model artifacts (a named Docker volume is possible via a compose-file edit,
+  documented); persists across restarts; created automatically on first
+  launch.
 - **Served model set**: The two models exposed by the default deployment —
   `minishlab/potion-multilingual-128M` (default) and
   `minishlab/potion-code-16M-v2` — matching the service's multi-model
@@ -250,6 +253,8 @@ onboarding path.
   public operational endpoints, error contract) is reused unchanged; this
   feature only packages and documents a deployment method.
 - The model storage default is a host directory inside the repository checkout
-  (so it is obvious and cleanable), overridable to any path or named volume.
+  (so it is obvious and cleanable), overridable to any host path; a named
+  volume requires a documented compose-file edit and is not environment-
+  selectable.
 - Compose file format versioning follows current tooling conventions (no
   obsolete top-level version key requirements).

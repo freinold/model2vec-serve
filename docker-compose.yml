@@ -11,9 +11,9 @@ services:
     image: ${MODEL2VEC_IMAGE:-ghcr.io/freinold/model2vec-serve:latest}
     container_name: model2vec-serve
     environment:
-      # Comma-separated model list; the service splits on ','.
+      # Comma-separated model list; the service splits on ','. The FIRST entry
+      # is the default model for requests that do not name one.
       - MODEL=${MODEL:-minishlab/potion-multilingual-128M,minishlab/potion-code-16M-v2}
-      - DEFAULT_MODEL=${DEFAULT_MODEL:-minishlab/potion-multilingual-128M}
       # hf-hub derives its cache from HOME, so downloads land in
       # <cache-dir>/.cache/huggingface/hub on the host (same pattern as the
       # Helm chart's persistence block).
@@ -21,6 +21,8 @@ services:
       # Optional service settings: short syntax passes them through only when
       # set (shell or .env), so an unset variable never becomes an empty one
       # (an empty API_KEY would enable auth with an empty Bearer token).
+      # DEFAULT_MODEL defaults to the first MODEL entry when unset.
+      - DEFAULT_MODEL
       - API_KEY
       - MODEL_OWNER
       - MODEL_ALIAS
@@ -29,7 +31,9 @@ services:
       - LOG_LEVEL
       - REQUEST_TIMEOUT_SECONDS
     ports:
-      - "${MODEL2VEC_PORT:-8080}:8080"
+      # Loopback-only by default; edit to expose beyond localhost
+      # (e.g. "8080:8080" to bind all interfaces).
+      - "127.0.0.1:${MODEL2VEC_PORT:-8080}:8080"
     volumes:
       - ${MODEL2VEC_CACHE_DIR:-./models}:/models
     restart: unless-stopped
