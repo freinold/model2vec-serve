@@ -5,7 +5,7 @@ mod common;
 
 // Unit tests for configuration parsing.
 
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use model2vec_serve::config::Config;
 
 const DEFAULT_MODEL: &str = "minishlab/potion-multilingual-128M";
@@ -25,6 +25,8 @@ fn default_values_are_reasonable() {
         max_input_length: 512,
         log_level: "info".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     assert_eq!(config.bind_address(), "0.0.0.0:8080");
@@ -163,4 +165,90 @@ fn alias_with_whitespace_is_rejected() {
         .unwrap_err();
 
     assert!(err.to_string().contains("whitespace"));
+}
+
+// TLS configuration parsing (spec 007).
+
+#[test]
+fn tls_defaults_to_disabled() {
+    let config = Config::parse_from(Vec::<&str>::new());
+
+    assert!(config.tls_cert.is_none());
+    assert!(config.tls_key.is_none());
+    assert!(matches!(
+        config.tls_mode(),
+        Ok(model2vec_serve::config::TlsMode::Disabled)
+    ));
+}
+
+#[test]
+fn parse_tls_cert_and_key_flags() {
+    let config = Config::parse_from([
+        "model2vec-serve",
+        "--tls-cert",
+        "/tmp/cert.pem",
+        "--tls-key",
+        "/tmp/key.pem",
+    ]);
+
+    assert_eq!(
+        config.tls_cert.as_deref(),
+        Some(std::path::Path::new("/tmp/cert.pem"))
+    );
+    assert_eq!(
+        config.tls_key.as_deref(),
+        Some(std::path::Path::new("/tmp/key.pem"))
+    );
+    assert!(matches!(
+        config.tls_mode(),
+        Ok(model2vec_serve::config::TlsMode::Enabled { .. })
+    ));
+}
+
+#[test]
+fn tls_cert_only_is_rejected() {
+    let config = Config::parse_from(["model2vec-serve", "--tls-cert", "/tmp/cert.pem"]);
+
+    let err = config.tls_mode().unwrap_err();
+    assert_eq!(
+        err,
+        "TLS requires both --tls-cert and --tls-key; only --tls-cert was provided"
+    );
+}
+
+#[test]
+fn tls_key_only_is_rejected() {
+    let config = Config::parse_from(["model2vec-serve", "--tls-key", "/tmp/key.pem"]);
+
+    let err = config.tls_mode().unwrap_err();
+    assert_eq!(
+        err,
+        "TLS requires both --tls-cert and --tls-key; only --tls-key was provided"
+    );
+}
+
+#[test]
+fn tls_flags_declare_env_aliases() {
+    // Environment manipulation is unsafe in edition 2024 and forbidden in
+    // this crate, so the env wiring is asserted via clap argument metadata
+    // instead of executing a parse against process env vars.
+    let command = Config::command();
+
+    let cert_arg = command
+        .get_arguments()
+        .find(|arg| arg.get_id() == "tls_cert")
+        .expect("--tls-cert argument must exist");
+    let key_arg = command
+        .get_arguments()
+        .find(|arg| arg.get_id() == "tls_key")
+        .expect("--tls-key argument must exist");
+
+    assert_eq!(
+        cert_arg.get_env().map(std::ffi::OsStr::to_string_lossy),
+        Some(std::borrow::Cow::Borrowed("TLS_CERT"))
+    );
+    assert_eq!(
+        key_arg.get_env().map(std::ffi::OsStr::to_string_lossy),
+        Some(std::borrow::Cow::Borrowed("TLS_KEY"))
+    );
 }

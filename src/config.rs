@@ -1,6 +1,7 @@
 //! Runtime configuration parsed from CLI arguments and environment variables.
 
 use clap::Parser;
+use std::path::PathBuf;
 
 /// Configuration for the model2vec-serve HTTP server.
 #[derive(Parser, Clone, Debug)]
@@ -70,6 +71,35 @@ pub struct Config {
     /// Per-request timeout in seconds.
     #[arg(long, default_value_t = 30, env = "REQUEST_TIMEOUT_SECONDS")]
     pub request_timeout_seconds: u64,
+
+    /// Path to the PEM-encoded TLS certificate (leaf plus optional chain).
+    ///
+    /// TLS is enabled only when both this and `--tls-key` are provided.
+    #[arg(long = "tls-cert", env = "TLS_CERT")]
+    pub tls_cert: Option<PathBuf>,
+
+    /// Path to the unencrypted PEM private key matching `--tls-cert`.
+    ///
+    /// TLS is enabled only when both this and `--tls-cert` are provided.
+    #[arg(long = "tls-key", env = "TLS_KEY")]
+    pub tls_key: Option<PathBuf>,
+}
+
+/// Transport mode derived from the TLS options.
+///
+/// The listener serves either plain HTTP (default) or HTTPS; there is no
+/// dual-protocol mode.
+#[derive(Clone, Debug)]
+pub enum TlsMode {
+    /// TLS is disabled: the configured port serves plain HTTP.
+    Disabled,
+    /// TLS is enabled: the configured port serves HTTPS using the files.
+    Enabled {
+        /// Path to the PEM certificate file.
+        cert: PathBuf,
+        /// Path to the matching PEM private key file.
+        key: PathBuf,
+    },
 }
 
 /// Parse a `KEY=ALIAS` pair for [`Config::model_alias`].
@@ -129,5 +159,32 @@ impl Config {
         self.default_model
             .clone()
             .or_else(|| self.models.first().cloned())
+    }
+
+    /// Returns the resolved transport mode for the listener.
+    ///
+    /// TLS is enabled only when both the certificate and the private key are
+    /// configured (all-or-nothing rule); supplying exactly one is a
+    /// configuration error reported before the listener binds.
+    ///
+    /// # Errors
+    ///
+    /// Returns the contract error message when exactly one TLS file is set.
+    pub fn tls_mode(&self) -> Result<TlsMode, String> {
+        match (&self.tls_cert, &self.tls_key) {
+            (None, None) => Ok(TlsMode::Disabled),
+            (Some(cert), Some(key)) => Ok(TlsMode::Enabled {
+                cert: cert.clone(),
+                key: key.clone(),
+            }),
+            (Some(_), None) => Err(
+                "TLS requires both --tls-cert and --tls-key; only --tls-cert was provided"
+                    .to_string(),
+            ),
+            (None, Some(_)) => Err(
+                "TLS requires both --tls-cert and --tls-key; only --tls-key was provided"
+                    .to_string(),
+            ),
+        }
     }
 }

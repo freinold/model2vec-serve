@@ -107,6 +107,8 @@ async fn root_endpoints_remain_available_in_multi_model_deployment() {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     let state = AppState::new(config, metrics_handle()).expect("failed to load models");
