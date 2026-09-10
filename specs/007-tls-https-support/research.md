@@ -193,18 +193,15 @@
   excluded from steady-state comparisons; TLS work is confined to the
   acceptor, so the request hot path is untouched. Recorded with reproducible
   invocation commands per the constitution's benchmarking rule.
-- **Enforcement**: The bench carries a deterministic gate — setting
+- **Enforcement**: The benchmark is a manual, pre-PR/pre-release check, not
+  a CI gate. The bench carries a deterministic tripwire — setting
   `TLS_BENCH_MAX_DELTA_PCT` (e.g. `10`) fails the run when the TLS
-  median-latency or throughput delta exceeds the threshold. These are the
-  noise-stable signals: shared runners swing p99 on sub-millisecond
-  loopback samples by ±20% between runs (observed: +21.5% on CI while
-  throughput moved -2.0%), so p99 stays in the recorded output and is
-  reviewed against the 10% budget before each release. CI runs the gate as
-  a reporting-only, non-blocking step (job-level `continue-on-error` still
-  fails the check run; step-level keeps the check green with the failure
-  visible as an annotation). The workflow is path-filtered (src/, benches/,
-  Cargo.toml, Cargo.lock) so docs/Helm/spec PRs skip the ~6-minute release
-  build entirely; it also runs on main pushes to keep the cache warm and
-  catch regressions after merge.
+  median-latency or throughput delta exceeds the threshold — for anyone who
+  made transport-relevant changes (src/, benches/, dependencies) to run
+  before opening a PR, and for the release review. CI does not run it: a
+  6-minute release-profile build on every PR (and on sub-millisecond p99,
+  which swings ±20% between shared runners — observed +21.5% on CI while
+  throughput moved -2.0%) costs more than it reports; p99 stays in the
+  recorded output and is reviewed against the 10% budget at release.
 - **Alternatives considered**: External load-test tooling — not needed;
   criterion + loopback is the project's established measurement path.
