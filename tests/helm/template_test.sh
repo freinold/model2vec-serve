@@ -85,6 +85,18 @@ echo "$OUTPUT" | grep -q "claimName: my-models"
 OUTPUT=$(render)
 ! echo "$OUTPUT" | grep -q "kind: Ingress"
 
+# The Service carries no annotations by default.
+OUTPUT=$(render)
+SERVICE_DOC=$(echo "$OUTPUT" | sed -n '/^kind: Service$/,/^---$/p')
+! echo "$SERVICE_DOC" | grep -q "annotations:"
+
+# service.annotations render on the Service metadata.
+OUTPUT=$(render \
+  --set service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=nlb)
+SERVICE_DOC=$(echo "$OUTPUT" | sed -n '/^kind: Service$/,/^---$/p')
+echo "$SERVICE_DOC" | grep -q "annotations:"
+echo "$SERVICE_DOC" | grep -q "service.beta.kubernetes.io/aws-load-balancer-type: nlb"
+
 # Enabling the ingress renders rules, merged extra labels, and the service backend.
 OUTPUT=$(render \
   --set ingress.enabled=true \
@@ -106,5 +118,42 @@ OUTPUT=$(render \
   --set "ingress.tls[0].hosts[0]=embeddings.example.com")
 INGRESS_DOC=$(echo "$OUTPUT" | sed -n '/^kind: Ingress$/,/^---$/p')
 echo "$INGRESS_DOC" | grep -q "secretName: tls-secret"
+
+# Application TLS is disabled by default: no tls volume, mount, args, and no
+# HTTPS probes.
+OUTPUT=$(render)
+DEPLOY_DOC=$(echo "$OUTPUT" | sed -n '/^kind: Deployment$/,/^---$/p')
+! echo "$DEPLOY_DOC" | grep -q -- '--tls-cert'
+! echo "$DEPLOY_DOC" | grep -q -- '--tls-key'
+! echo "$DEPLOY_DOC" | grep -q "scheme: HTTPS"
+! echo "$DEPLOY_DOC" | grep -q "name: tls$"
+
+# Enabling application TLS wires the secret volume, mount, args, and probes.
+OUTPUT=$(render --set tls.enabled=true --set tls.existingSecret=m2v-tls)
+DEPLOY_DOC=$(echo "$OUTPUT" | sed -n '/^kind: Deployment$/,/^---$/p')
+echo "$DEPLOY_DOC" | grep -q "secretName: m2v-tls"
+echo "$DEPLOY_DOC" | grep -q "optional: false"
+echo "$DEPLOY_DOC" | grep -q "mountPath: /etc/model2vec-serve/tls"
+echo "$DEPLOY_DOC" | grep -q "readOnly: true"
+echo "$DEPLOY_DOC" | grep -A1 -- '- --tls-cert$' | grep -q '/etc/model2vec-serve/tls/tls.crt'
+echo "$DEPLOY_DOC" | grep -A1 -- '- --tls-key$' | grep -q '/etc/model2vec-serve/tls/tls.key'
+echo "$DEPLOY_DOC" | grep -q "scheme: HTTPS"
+
+# tls.enabled without existingSecret fails rendering instead of deploying a
+# service that cannot start.
+if render --set tls.enabled=true > /dev/null 2>&1; then
+  echo "expected failure: tls.enabled without tls.existingSecret must fail rendering"
+  exit 1
+fi
+
+# certKey/keyKey overrides change the rendered argument paths.
+OUTPUT=$(render \
+  --set tls.enabled=true \
+  --set tls.existingSecret=m2v-tls \
+  --set tls.certKey=server.crt \
+  --set tls.keyKey=server.key)
+DEPLOY_DOC=$(echo "$OUTPUT" | sed -n '/^kind: Deployment$/,/^---$/p')
+echo "$DEPLOY_DOC" | grep -A1 -- '- --tls-cert$' | grep -q '/etc/model2vec-serve/tls/server.crt'
+echo "$DEPLOY_DOC" | grep -A1 -- '- --tls-key$' | grep -q '/etc/model2vec-serve/tls/server.key'
 
 echo "Helm chart validation passed."

@@ -42,6 +42,9 @@ service:
   type: ClusterIP
   port: 80
   targetPort: 8080
+  # Extra annotations merged into the Service metadata (for example cert-manager
+  # or cloud load-balancer annotations). Empty by default.
+  annotations: {}
 
 resources:
   limits:
@@ -77,6 +80,19 @@ persistence:
   size: 5Gi
   mountPath: /models
   annotations: {}
+
+# Optional application-side TLS. When enabled, the container serves HTTPS on
+# the target port (single listener; plain HTTP is disabled) and probes switch
+# to the HTTPS scheme. The certificate and key are read from an
+# operator-managed Kubernetes secret mounted as files, so traffic can be
+# encrypted end to end to the application inside the pod. Pair with a
+# passthrough ingress for encryption on every hop (see README).
+tls:
+  enabled: false
+  existingSecret: ""      # required when enabled
+  certKey: tls.crt        # secret key holding the PEM certificate chain
+  keyKey: tls.key         # secret key holding the PEM private key
+  mountPath: /etc/model2vec-serve/tls
 
 # Optional Ingress to expose the service outside the cluster.
 ingress:
