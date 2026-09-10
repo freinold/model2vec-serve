@@ -32,7 +32,7 @@ async fn main() -> anyhow::Result<()> {
         }
         Ok(TlsMode::Enabled { cert, key }) => {
             let setup = tls::load(&cert, &key)?;
-            let addr = resolve_addr(&bind_address).await?;
+            let listener = bind_tls_listener(&bind_address).await?;
 
             let handle = axum_server::Handle::new();
             let shutdown_handle = handle.clone();
@@ -41,8 +41,12 @@ async fn main() -> anyhow::Result<()> {
                 shutdown_handle.graceful_shutdown(None);
             });
 
-            tracing::info!("listening on {} (tls)", addr);
-            axum_server::bind_rustls(addr, setup.config)
+            // A bound listener always reports its local address.
+            let bound_addr = listener
+                .local_addr()
+                .expect("bound listener has a local address");
+            tracing::info!("listening on {} (tls)", bound_addr);
+            axum_server::from_tcp_rustls(listener, setup.config)
                 .handle(handle)
                 .serve(app(state).into_make_service())
                 .await?;
@@ -52,18 +56,37 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Resolve the configured `host:port` into a socket address.
+/// Bind a TLS listener, trying every resolved address in turn.
 ///
-/// Numeric hosts parse directly; hostnames are resolved to their first
-/// address so both transports accept the same host values.
-async fn resolve_addr(bind_address: &str) -> anyhow::Result<SocketAddr> {
-    if let Ok(addr) = bind_address.parse() {
-        return Ok(addr);
+/// Numeric addresses bind directly; hostnames resolve and each candidate is
+/// attempted so a single unroutable resolved address does not abort startup,
+/// mirroring how the plain-HTTP path binds.
+async fn bind_tls_listener(bind_address: &str) -> anyhow::Result<std::net::TcpListener> {
+    if let Ok(addr) = bind_address.parse::<SocketAddr>() {
+        return std::net::TcpListener::bind(addr).map_err(|err| {
+            anyhow::Error::new(err).context(format!("failed to bind TLS listener on {addr}"))
+        });
     }
-    tokio::net::lookup_host(bind_address)
-        .await?
-        .next()
-        .ok_or_else(|| anyhow::anyhow!("failed to resolve bind address {bind_address}"))
+
+    let mut last_error = None;
+    for addr in tokio::net::lookup_host(bind_address).await? {
+        match std::net::TcpListener::bind(addr) {
+            Ok(listener) => return Ok(listener),
+            Err(err) => {
+                tracing::debug!("skipping TLS bind candidate {addr}: {err}");
+                last_error = Some(err);
+            }
+        }
+    }
+
+    match last_error {
+        Some(err) => Err(anyhow::Error::new(err).context(format!(
+            "failed to bind TLS listener on any resolved address for {bind_address}"
+        ))),
+        None => Err(anyhow::anyhow!(
+            "host '{bind_address}' resolved to no addresses"
+        )),
+    }
 }
 
 async fn shutdown_signal() {
