@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.3](https://github.com/freinold/model2vec-serve/compare/v0.5.2...v0.5.3) - 2026-09-10
+
+### Added
+
+- add optional TLS/HTTPS serving with end-to-end encryption
+
+### Fixed
+
+- try all resolved addresses when binding the TLS listener
+
+### Other
+
+- *(deps)* update rust crate time to v0.3.47 [security] ([#128](https://github.com/freinold/model2vec-serve/pull/128))
+- pin bench certificate SANs and add the SC-005 delta gate
+- pin self-signed test roots instead of disabling TLS verification
+- document TLS options, cert-manager flows, and compose TLS usage
+
 ## [0.5.2](https://github.com/freinold/model2vec-serve/compare/v0.5.1...v0.5.2) - 2026-09-01
 
 ### Added
