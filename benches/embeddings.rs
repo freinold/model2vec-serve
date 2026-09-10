@@ -130,6 +130,26 @@ const TRANSPORT_REQUESTS_PER_ITER: usize = 16;
 static PLAIN_LATENCIES: Mutex<Vec<Duration>> = Mutex::new(Vec::new());
 static TLS_LATENCIES: Mutex<Vec<Duration>> = Mutex::new(Vec::new());
 
+/// Build a bench HTTPS client that verifies the server against the generated
+/// bench certificate as its pinned trust root, keeping the full rustls
+/// verification path exercised instead of disabling certificate validation.
+fn pinned_tls_client(cert_der: &rustls::pki_types::CertificateDer<'static>) -> reqwest::Client {
+    let mut roots = rustls::RootCertStore::empty();
+    roots
+        .add(cert_der.clone())
+        .expect("bench certificate must be a valid trust root");
+    let provider = rustls::crypto::aws_lc_rs::default_provider();
+    let config = rustls::ClientConfig::builder_with_provider(provider.into())
+        .with_safe_default_protocol_versions()
+        .expect("default protocol versions")
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    reqwest::Client::builder()
+        .use_preconfigured_tls(config)
+        .build()
+        .expect("failed to build bench https client")
+}
+
 /// Servers and clients for the transport comparison.
 struct TransportServers {
     /// Bound plain-HTTP listener address.
@@ -190,10 +210,7 @@ async fn spawn_transport_servers(state: Arc<AppState>) -> TransportServers {
         .expect("tls bench server failed to bind");
 
     let plain_client = reqwest::Client::new();
-    let tls_client = reqwest::Client::builder()
-        .danger_accept_invalid_certs(true)
-        .build()
-        .expect("failed to build bench https client");
+    let tls_client = pinned_tls_client(cert.der());
 
     for (client, url) in [
         (&plain_client, format!("http://{plain_addr}/health")),

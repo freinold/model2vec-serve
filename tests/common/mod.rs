@@ -6,6 +6,7 @@
 use hf_hub::HFClientSync;
 use metrics_exporter_prometheus::PrometheusHandle;
 use model2vec_serve::{config::Config, routes::app, state::AppState, telemetry};
+use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
 use tempfile::TempDir;
@@ -184,6 +185,8 @@ pub struct TlsFiles {
     pub cert_path: PathBuf,
     /// Path to the PEM private key file.
     pub key_path: PathBuf,
+    /// DER bytes of the leaf certificate, for pinning it as a trust root.
+    pub cert_der: Vec<u8>,
 }
 
 impl TlsFiles {
@@ -200,24 +203,30 @@ impl TlsFiles {
 /// Generate a self-signed certificate and private key as PEM strings.
 ///
 /// `not_after` overrides the certificate expiry (used to build expired
-/// fixtures); when `None` the rcgen default (about one week) applies.
-fn generate_pems(not_after: Option<OffsetDateTime>) -> (String, String) {
+/// fixtures); when `None` the rcgen default (about one week) applies. The
+/// certificate carries a `localhost` DNS SAN and a `127.0.0.1` IP SAN so the
+/// pinned-root test clients can verify the host they connect to.
+fn generate_pems(not_after: Option<OffsetDateTime>) -> (String, String, Vec<u8>) {
     let key_pair = rcgen::KeyPair::generate().expect("failed to generate test key pair");
     let mut params = rcgen::CertificateParams::new(vec!["localhost".to_string()])
         .expect("valid subject alt name");
     params
         .distinguished_name
         .push(rcgen::DnType::CommonName, "localhost");
+    params
+        .subject_alt_names
+        .push(rcgen::SanType::IpAddress(IpAddr::V4(Ipv4Addr::LOCALHOST)));
     if let Some(expiry) = not_after {
         params.not_before = OffsetDateTime::from_unix_timestamp(0).expect("valid unix epoch");
         params.not_after = expiry;
     }
     let cert = params.self_signed(&key_pair).expect("failed to self-sign");
-    (cert.pem(), key_pair.serialize_pem())
+    let cert_der = cert.der().as_ref().to_vec();
+    (cert.pem(), key_pair.serialize_pem(), cert_der)
 }
 
 /// Write the given PEM strings to a fresh temporary directory.
-fn write_pair(cert_pem: &str, key_pem: &str) -> TlsFiles {
+fn write_pair(cert_pem: &str, key_pem: &str, cert_der: Vec<u8>) -> TlsFiles {
     let dir = tempfile::tempdir().expect("failed to create temp dir");
     let cert_path = dir.path().join("cert.pem");
     let key_path = dir.path().join("key.pem");
@@ -227,27 +236,28 @@ fn write_pair(cert_pem: &str, key_pem: &str) -> TlsFiles {
         dirs: vec![dir],
         cert_path,
         key_path,
+        cert_der,
     }
 }
 
 /// Generate a valid self-signed certificate/key pair.
 pub fn tls_pair() -> TlsFiles {
-    let (cert, key) = generate_pems(None);
-    write_pair(&cert, &key)
+    let (cert, key, cert_der) = generate_pems(None);
+    write_pair(&cert, &key, cert_der)
 }
 
 /// Generate a certificate/key pair whose key does not match the certificate.
 pub fn mismatched_tls_pair() -> TlsFiles {
-    let (cert, _) = generate_pems(None);
-    let (_, key) = generate_pems(None);
-    write_pair(&cert, &key)
+    let (cert, _, cert_der) = generate_pems(None);
+    let (_, key, _) = generate_pems(None);
+    write_pair(&cert, &key, cert_der)
 }
 
 /// Generate a certificate/key pair with an already expired certificate.
 pub fn expired_tls_pair() -> TlsFiles {
     let expired = OffsetDateTime::from_unix_timestamp(1_000_000_000).expect("valid unix timestamp");
-    let (cert, key) = generate_pems(Some(expired));
-    write_pair(&cert, &key)
+    let (cert, key, cert_der) = generate_pems(Some(expired));
+    write_pair(&cert, &key, cert_der)
 }
 
 /// Generate a valid key with a certificate file containing non-PEM garbage.
@@ -256,12 +266,13 @@ pub fn garbage_cert_tls_pair() -> TlsFiles {
     let cert_path = dir.path().join("cert.pem");
     let key_path = dir.path().join("key.pem");
     std::fs::write(&cert_path, b"this is not a pem file\n").expect("failed to write garbage");
-    let (_, key) = generate_pems(None);
+    let (_, key, _) = generate_pems(None);
     std::fs::write(&key_path, key).expect("failed to write key fixture");
     TlsFiles {
         dirs: vec![dir],
         cert_path,
         key_path,
+        cert_der: Vec::new(),
     }
 }
 
@@ -270,13 +281,14 @@ pub fn garbage_key_tls_pair() -> TlsFiles {
     let dir = tempfile::tempdir().expect("failed to create temp dir");
     let cert_path = dir.path().join("cert.pem");
     let key_path = dir.path().join("key.pem");
-    let (cert, _) = generate_pems(None);
+    let (cert, _, cert_der) = generate_pems(None);
     std::fs::write(&cert_path, cert).expect("failed to write cert fixture");
     std::fs::write(&key_path, b"\x00\x01\x02 not pem either\n").expect("failed to write garbage");
     TlsFiles {
         dirs: vec![dir],
         cert_path,
         key_path,
+        cert_der,
     }
 }
 

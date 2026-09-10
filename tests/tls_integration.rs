@@ -18,12 +18,26 @@ use std::net::SocketAddr;
 use std::time::Duration;
 use tokio::task::JoinHandle;
 
-/// Build a client that accepts the self-signed test certificates.
-fn client() -> Client {
+/// Build a client that verifies the server against the generated test
+/// certificate as its pinned trust root.
+///
+/// This keeps the full rustls verification path (chain + IP SAN) exercised in
+/// tests instead of disabling certificate validation.
+fn pinned_client(cert_der: &[u8]) -> Client {
+    let mut roots = rustls::RootCertStore::empty();
+    roots
+        .add(rustls::pki_types::CertificateDer::from(cert_der.to_vec()))
+        .expect("test certificate must be a valid trust root");
+    let provider = rustls::crypto::aws_lc_rs::default_provider();
+    let config = rustls::ClientConfig::builder_with_provider(provider.into())
+        .with_safe_default_protocol_versions()
+        .expect("default protocol versions")
+        .with_root_certificates(roots)
+        .with_no_client_auth();
     Client::builder()
-        .danger_accept_invalid_certs(true)
+        .use_preconfigured_tls(config)
         .build()
-        .expect("failed to build https test client")
+        .expect("failed to build pinned https test client")
 }
 
 /// Build a client that never negotiates TLS.
@@ -34,11 +48,9 @@ fn plain_client() -> Client {
 }
 
 /// Spawn the shared app behind a rustls listener on an ephemeral port.
-async fn spawn_tls_server(
-    cert: &std::path::Path,
-    key: &std::path::Path,
-) -> (SocketAddr, JoinHandle<()>) {
-    let tls = model2vec_serve::tls::load(cert, key).expect("valid TLS fixture");
+async fn spawn_tls_server(files: &common::TlsFiles) -> (SocketAddr, JoinHandle<()>) {
+    let tls =
+        model2vec_serve::tls::load(&files.cert_path, &files.key_path).expect("valid TLS fixture");
     let config = test_config(None);
     let state = AppState::new(config, metrics_handle()).expect("failed to load model");
 
@@ -60,7 +72,11 @@ async fn spawn_tls_server(
         .await
         .expect("tls server failed to bind");
 
-    wait_until_ready(&client(), &format!("https://{addr}/health")).await;
+    wait_until_ready(
+        &pinned_client(&files.cert_der),
+        &format!("https://{addr}/health"),
+    )
+    .await;
     (addr, join)
 }
 
@@ -113,9 +129,9 @@ fn embed_payload() -> String {
 #[tokio::test]
 async fn all_endpoint_classes_served_over_https() {
     let files = tls_pair();
-    let (addr, server) = spawn_tls_server(&files.cert_path, &files.key_path).await;
+    let (addr, server) = spawn_tls_server(&files).await;
     let base = format!("https://{addr}");
-    let client = client();
+    let client = pinned_client(&files.cert_der);
 
     let health = client.get(format!("{base}/health")).send().await.unwrap();
     assert_eq!(health.status(), 200);
@@ -148,9 +164,9 @@ async fn all_endpoint_classes_served_over_https() {
 #[tokio::test]
 async fn https_response_equals_plain_http_response() {
     let files = tls_pair();
-    let (tls_addr, tls_server) = spawn_tls_server(&files.cert_path, &files.key_path).await;
+    let (tls_addr, tls_server) = spawn_tls_server(&files).await;
     let (plain_addr, plain_server) = spawn_plain_server().await;
-    let https = client();
+    let https = pinned_client(&files.cert_der);
     let plain = plain_client();
 
     for (path, body) in [
@@ -201,13 +217,13 @@ async fn https_response_equals_plain_http_response() {
 #[tokio::test]
 async fn plain_http_to_tls_port_fails_but_service_stays_healthy() {
     let files = tls_pair();
-    let (addr, server) = spawn_tls_server(&files.cert_path, &files.key_path).await;
+    let (addr, server) = spawn_tls_server(&files).await;
     let plain = plain_client();
 
     let rejected = plain.get(format!("http://{addr}/health")).send().await;
     assert!(rejected.is_err(), "plain HTTP to the TLS port must fail");
 
-    let still_healthy = client()
+    let still_healthy = pinned_client(&files.cert_der)
         .get(format!("https://{addr}/health"))
         .send()
         .await
