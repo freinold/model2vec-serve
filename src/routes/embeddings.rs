@@ -107,12 +107,12 @@ fn validate_request(request: &EmbeddingRequest, state: &AppState) -> Result<(), 
         ));
     }
 
-    if let Some(ref model) = request.model {
-        if state.registry.get(model).is_none() {
-            return Err(AppError::ModelNotFound(format!(
-                "model '{model}' is not loaded"
-            )));
-        }
+    if let Some(ref model) = request.model
+        && state.registry.get(model).is_none()
+    {
+        return Err(AppError::ModelNotFound(format!(
+            "model '{model}' is not loaded"
+        )));
     }
 
     Ok(())
