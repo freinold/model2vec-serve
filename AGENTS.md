@@ -106,7 +106,7 @@ cargo run --release -- \
 
 ## Code Conventions
 
-- **Rust edition**: 2024; MSRV is 1.85.
+- **Rust edition**: 2024; MSRV is 1.88 (time 0.3.46+ requires 1.88).
 - `unsafe_code = "forbid"` — never introduce `unsafe` blocks.
 - `unwrap_used = "deny"` — prefer `?`, `Result`, `Option` combinators, or
   `anyhow::Context`. Only `expect` when the invariant is truly obvious and

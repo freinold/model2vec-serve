@@ -119,7 +119,7 @@ paths, secrets, or stack traces.
 
 ## Deployment packaging
 
-- **Docker**: multi-stage build from `rust:1.85-slim` to
+- **Docker**: multi-stage build from `rust:1.98-slim` to
   `debian:bookworm-slim`. The final image is small, exposes port `8080`, and
   runs `model2vec-serve` as the entry point.
 - **Helm**: chart under `helm/model2vec-serve/` with `values.yaml` for a list
