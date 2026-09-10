@@ -39,7 +39,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1"
 axum = "0.8"
-axum-server = { version = "0.7", features = ["tls-rustls"] }
+axum-server = { version = "0.8", features = ["tls-rustls"] }
 base64 = "0.23"
 clap = { version = "4", features = ["derive", "env"] }
 metrics = "0.24"
@@ -73,8 +73,8 @@ x509-parser = "0.18"
 criterion = { version = "0.8", features = ["async_tokio"] }
 http-body-util = "0.1"
 hf-hub = { version = "1", features = ["blocking"] }
-rcgen = "0.13"
-reqwest = { version = "0.12", default-features = false, features = [
+rcgen = "0.14"
+reqwest = { version = "0.13", default-features = false, features = [
     "rustls-tls",
     "json",
 ] }
