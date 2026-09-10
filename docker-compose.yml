@@ -8,7 +8,7 @@
 # Validated offline by tests/compose/compose_config_test.sh.
 services:
   model2vec-serve:
-    image: ${MODEL2VEC_IMAGE:-ghcr.io/freinold/model2vec-serve:latest}
+    image: ${MODEL2VEC_IMAGE:-ghcr.io/freinold/model2vec-serve:latest@sha256:7d698692ee8c6596817daa0821e78fda446583d4ba35c9606a93c6f87976b88e}
     container_name: model2vec-serve
     environment:
       # Comma-separated model list; the service splits on ','. The FIRST entry
