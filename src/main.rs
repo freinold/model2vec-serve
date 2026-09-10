@@ -47,6 +47,7 @@ async fn main() -> anyhow::Result<()> {
                 .expect("bound listener has a local address");
             tracing::info!("listening on {} (tls)", bound_addr);
             axum_server::from_tcp_rustls(listener, setup.config)
+                .map_err(anyhow::Error::from)?
                 .handle(handle)
                 .serve(app(state).into_make_service())
                 .await?;

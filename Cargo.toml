@@ -75,7 +75,7 @@ http-body-util = "0.1"
 hf-hub = { version = "1", features = ["blocking"] }
 rcgen = "0.14"
 reqwest = { version = "0.13", default-features = false, features = [
-    "rustls-tls",
+    "rustls",
     "json",
 ] }
 serde_json = "1"
