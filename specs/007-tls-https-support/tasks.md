@@ -290,10 +290,11 @@ fully contract-conformant.
     `specs/007-tls-https-support/plan.md` (append a "Benchmark results"
     section) per the constitution's reproducible-benchmark rule.
   - Deterministic gate: setting `TLS_BENCH_MAX_DELTA_PCT` (e.g. `10`) fails
-    the bench when the TLS p99 or throughput delta exceeds the threshold.
-    CI runs it as a reporting-only, non-blocking job (shared-runner noise
-    makes a hard gate flaky); the recorded deltas are reviewed against the
-    10% budget before release.
+    the bench when the TLS median-latency or throughput delta exceeds the
+    threshold (noise-stable signals; p99 on sub-millisecond loopback samples
+    swings ±20% between shared runners and is reported for review instead).
+    CI runs it as a reporting-only, non-blocking step-level job; the
+    recorded deltas are reviewed against the 10% budget before release.
 - [X] T017 Run the full validation suite and quickstart walk
   - `cargo fmt -- --check`; `cargo clippy --all-targets --all-features -- -D
     warnings`; `cargo test`; `bash tests/helm/lint_test.sh && bash
