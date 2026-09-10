@@ -103,7 +103,15 @@ helm install m2v ./helm/model2vec-serve \
 
 ## 5. Performance sanity (SC-005)
 
-Run the existing embedding benchmark over plain HTTP and over the TLS
-listener (same build, loopback) and compare steady-state p99/throughput;
-the delta must stay within 10%. Exact commands are recorded with the bench
-during implementation (constitution: reproducible benchmark invocations).
+Run this manually before opening a PR after transport-relevant changes
+(`src/`, `benches/`, dependency bumps):
+
+```bash
+TLS_BENCH_MAX_DELTA_PCT=10 cargo bench --bench embeddings -- \
+  --measurement-time 3 --warm-up-time 1 --sample-size 10 "transport"
+```
+
+The gate fails the run when the TLS median-latency or throughput delta
+versus plain HTTP exceeds 10%; p99 is reported alongside for the SC-005
+review (it swings with runner noise on sub-millisecond samples). Recorded
+results live in the feature plan (`plan.md` → Benchmark results).
