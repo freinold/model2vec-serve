@@ -293,8 +293,9 @@ fully contract-conformant.
     the bench when the TLS median-latency or throughput delta exceeds the
     threshold (noise-stable signals; p99 on sub-millisecond loopback samples
     swings ±20% between shared runners and is reported for review instead).
-    CI runs it as a reporting-only, non-blocking step-level job; the
-    recorded deltas are reviewed against the 10% budget before release.
+    CI runs it as a reporting-only, non-blocking step-level job,
+    path-filtered to Rust-relevant changes so docs/Helm/spec PRs skip it;
+    the recorded deltas are reviewed against the 10% budget before release.
 - [X] T017 Run the full validation suite and quickstart walk
   - `cargo fmt -- --check`; `cargo clippy --all-targets --all-features -- -D
     warnings`; `cargo test`; `bash tests/helm/lint_test.sh && bash
