@@ -130,9 +130,9 @@ jobs:
       - name: Read manifest digest
         id: inspect
         run: |
-          tag="$(jq -r '.tags[0]' <<< "$DOCKER_METADATA_OUTPUT_JSON" | sed 's|.*/||')"
+          ref="$(jq -r '.tags[0]' <<< "$DOCKER_METADATA_OUTPUT_JSON")"
           digest="$(docker buildx imagetools inspect \
-            "${REGISTRY}/${IMAGE_NAME}:${tag}" \
+            "$ref" \
             --format '{{json .Manifest.Digest}}' | jq -r .)"
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
