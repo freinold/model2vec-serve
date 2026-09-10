@@ -106,7 +106,9 @@ cargo run --release -- \
 
 ## Code Conventions
 
-- **Rust edition**: 2024; MSRV is 1.88 (time 0.3.46+ requires 1.88).
+- **Rust edition**: 2024; MSRV tracks the stable toolchain used by CI and
+  the Docker builder (currently 1.98) so the MSRV-aware resolver never
+  holds dependencies below their latest versions.
 - `unsafe_code = "forbid"` — never introduce `unsafe` blocks.
 - `unwrap_used = "deny"` — prefer `?`, `Result`, `Option` combinators, or
   `anyhow::Context`. Only `expect` when the invariant is truly obvious and

@@ -2,10 +2,12 @@
 name = "model2vec-serve"
 version = "0.5.4"
 edition = "2024"
-# Keep in sync with the MSRV floor of security-relevant dependencies:
-# time 0.3.46+ requires 1.88, and a lower MSRV makes cargo update downgrade
-# the lockfile below the patched versions after every renovate security bump.
-rust-version = "1.88"
+# MSRV tracks the stable toolchain used by CI, the Docker builder, and
+# release tooling (this is an application, not a published library). A
+# lower floor makes cargo's MSRV-aware resolver hold dependencies back
+# below their latest versions — which previously downgraded lockfile
+# security fixes (time) right after renovate bumped them.
+rust-version = "1.98"
 authors = ["freinold"]
 license = "MIT"
 description = "Lightweight OpenAI and TEI compatible embeddings server for model2vec models"

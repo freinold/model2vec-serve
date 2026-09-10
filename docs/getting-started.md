@@ -5,7 +5,7 @@ endpoints, and validating the container and Helm chart.
 
 ## Prerequisites
 
-- Rust toolchain (stable, 1.88+)
+- Rust toolchain (stable, 1.98+; the MSRV tracks the toolchain used by CI)
 - A model2vec model identifier (e.g. `minishlab/potion-multilingual-128M`) or a local model
   directory
 - Docker (for container validation)
