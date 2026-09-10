@@ -72,17 +72,14 @@ code yet.
 - [X] T002 Add TLS certificate fixture helpers to `tests/common/mod.rs`
   - `rcgen`-based helpers writing PEM files into a `tempfile::TempDir` and
     returning their paths (pattern: existing `tests/common/mod.rs` helpers):
-    `tls_pair()` (self-signed valid pair), `mismatched_pair()` (cert from one
-    key + a second, different key), `expired_pair()`, `garbage_file()` (valid
-    filename, non-PEM bytes), and `encrypted_key_pair()` (PKCS#8-encrypted
-    key via openssl-compatible PEM is NOT producible by rcgen — instead
-    generate an RSA key with rcgen and wrap its PEM with the
-    `ENCRYPTED PRIVATE KEY` header detection contract by writing a
-    fixture created at test time using `rcgen`'s key + manual
-    AES/openssl-free approach ONLY if feasible; otherwise generate the
-    encrypted fixture by shelling out to `openssl req -aes256` when
-    available and `#[ignore]` the affected test when `openssl` is absent —
-    document which path is used in the test module doc comment).
+    `tls_pair()` (self-signed valid pair with `localhost` DNS SAN + `127.0.0.1`
+    IP SAN, plus the leaf DER for pinned-root clients),
+    `mismatched_pair()` (cert from one key + a second, different key),
+    `expired_pair()`, `garbage_file()` (valid filename, non-PEM bytes), and
+    `encrypted_key_pair()` (an encrypted PKCS#8 key produced via `openssl`
+    when available, falling back to a PEM-label-correct stub otherwise —
+    both satisfy the label-driven E4 detection contract, so the E4 test is
+    always runnable without OpenSSL).
   - Helpers must not be `pub` outside `tests/` scope conventions already
     used; keep clippy pedantic-clean (no `unwrap` — propagate results).
   - Smoke-check: a tiny test in `tests/common/mod.rs`'s test module or the
@@ -117,13 +114,20 @@ HTTPS; restart without TLS options and confirm plain HTTP is unchanged
     in-process app with `tokio`), but on a real TCP listener at
     `127.0.0.1:0` with TLS enabled using `tests/common` fixtures:
     (a) HTTPS request to `/health`, `/v1/models`, `/embed` succeeds via
-    `reqwest` (accept invalid certs) with the documented response shapes
+    `reqwest` (client pinned to the fixture root, never accepting invalid
+    certs) with the documented response shapes
     (`specs/001-model2vec-embedding-api/contracts/`);
     (b) response bytes for `/embed` equal a plain-HTTP run of the same build
     (contract identity, SC-002);
     (c) sending plain-HTTP bytes to the TLS port fails at transport level
     while the service keeps serving subsequent HTTPS requests (edge case);
     (d) startup log line states TLS is listening (no key material).
+  - GREEN state additionally covers (FR-005 full contract): status/body
+    parity for `/health`, `/ready`, `/info`, `/v1/models`, `/docs`,
+    `/metrics`, `/embed`, `/v1/embeddings` (success AND unknown-model error
+    body), and the TEI per-model routes; API-key auth parity (401/401/200
+    for missing/wrong/correct key) with `/health`, `/ready`, `/metrics`
+    staying public over both transports.
   - RED: `--tls-cert` does not exist yet.
 
 ### Implementation for User Story 1
@@ -285,6 +289,11 @@ fully contract-conformant.
     invocation commands and results in
     `specs/007-tls-https-support/plan.md` (append a "Benchmark results"
     section) per the constitution's reproducible-benchmark rule.
+  - Deterministic gate: setting `TLS_BENCH_MAX_DELTA_PCT` (e.g. `10`) fails
+    the bench when the TLS p99 or throughput delta exceeds the threshold.
+    CI runs it as a reporting-only, non-blocking job (shared-runner noise
+    makes a hard gate flaky); the recorded deltas are reviewed against the
+    10% budget before release.
 - [X] T017 Run the full validation suite and quickstart walk
   - `cargo fmt -- --check`; `cargo clippy --all-targets --all-features -- -D
     warnings`; `cargo test`; `bash tests/helm/lint_test.sh && bash

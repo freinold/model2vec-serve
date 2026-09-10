@@ -15,6 +15,7 @@ behavior in [contracts/chart-values.md](./contracts/chart-values.md).
 ## 1. Generate a test certificate pair
 
 ```bash
+mkdir -p /tmp/tls
 openssl req -x509 -newkey rsa:2048 -nodes -days 30 \
   -keyout /tmp/tls/key.pem -out /tmp/tls/cert.pem \
   -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
@@ -33,9 +34,11 @@ Expected: startup log states TLS is enabled with subject, issuer, and expiry
 
 ```bash
 # HTTPS works for every endpoint class
-curl -sk https://localhost:8443/health
-curl -sk https://localhost:8443/v1/models
-curl -sk https://localhost:8443/v1/embeddings \
+# --cacert verifies the server certificate instead of accepting any
+# certificate; the SANs from step 1 cover localhost and 127.0.0.1.
+curl --cacert /tmp/tls/cert.pem https://localhost:8443/health
+curl --cacert /tmp/tls/cert.pem https://localhost:8443/v1/models
+curl --cacert /tmp/tls/cert.pem https://localhost:8443/v1/embeddings \
   -H 'content-type: application/json' \
   -d '{"input":"hello","model":"minishlab/potion-base-2M"}'
 
@@ -55,7 +58,9 @@ curl -s http://localhost:8443/health || echo "rejected as expected"
 ## 3. Backward compatibility + misconfiguration matrix (FR-002, US3, SC-004)
 
 Run each case; every failure must appear **within seconds**, name the item,
-and exit before the port binds:
+and exit before the port binds (the E6 row's `curl -k` is deliberate: an
+expired certificate cannot pass verification, which is the behavior under
+test):
 
 | Case | Command | Expected |
 |------|---------|----------|
@@ -66,7 +71,7 @@ and exit before the port binds:
 | Garbage file (E3) | `echo hello > /tmp/tls/bad.pem` + paths | `... is not a valid PEM ...` |
 | Mismatched pair (E5) | generate a second key, pair cert1+key2 | `... does not match the private key ...` |
 | Encrypted key (E4) | `openssl req -newkey rsa:2048 -aes256 -passout pass:x ...` | `... encrypted keys are not supported` |
-| Expired cert (E6) | `openssl req -x509 -newkey rsa:2048 -nodes -keyout expired.key -out expired.pem -subj "/CN=old" -not_before 20250101000000Z -not_after 20250201000000Z` | `warn!` names expiry, service still starts |
+| Expired cert (E6) | `openssl req -x509 -newkey rsa:2048 -nodes -keyout expired.key -out expired.pem -subj "/CN=old" -not_before 20250101000000Z -not_after 20250201000000Z` (requires OpenSSL ≥ 3.1; on older versions generate a past-dated pair with your platform's tooling — the rcgen fixture in `tests/common/mod.rs` shows one way) | `warn!` names expiry, service still starts |
 
 No TLS mode may print private key contents anywhere (FR-007).
 
@@ -88,7 +93,7 @@ helm install m2v ./helm/model2vec-serve \
   chart (run the chart's template test suite).
 - With the values above, the rendered Deployment mounts the secret, passes
   `--tls-cert/--tls-key`, and probes use `scheme: HTTPS`.
-- `kubectl port-forward` + `curl -sk https://...` reaches the pod over TLS.
+- `kubectl port-forward` + `curl --cacert /tmp/tls/cert.pem https://...` reaches the pod over TLS (verified against the certificate, not blindly accepted).
 - Passthrough ingress (nginx example in `helm/model2vec-serve/README.md`):
   from outside the cluster, `openssl s_client -connect <edge>:443 -servername
   <host>` shows the **application's** certificate chain end to end, proving

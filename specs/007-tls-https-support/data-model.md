@@ -64,7 +64,7 @@ file paths. Disabled by default; no rendered output when disabled.
 | `tls.certKey` | values.yaml | string | `tls.crt` | non-empty | secret key with cert chain |
 | `tls.keyKey` | values.yaml | string | `tls.key` | non-empty | secret key with private key |
 | `tls.mountPath` | values.yaml | path | `/etc/model2vec-serve/tls` | — | container mount point |
-| volume + mount | derived | — | — | secret `optional: false` | missing secret fails pod scheduling |
+| volume + mount | derived | — | — | secret `optional: false` | missing secret keeps the pod from starting (`Pending`/`ContainerCreating`, `MountVolume.SetUp failed` event) |
 | probe scheme | derived | `HTTP`/`HTTPS` | HTTP | HTTPS when `tls.enabled` | kubelet skips cert verification |
 
 Relationships: binds exactly one secret → one volume → two file paths → the
@@ -79,5 +79,7 @@ service's `--tls-cert`/`--tls-key` args.
   auth behavior, or error JSON — only the transport.
 - INV-4: Private key material never appears in configuration values (chart
   values, env vars), logs, or error messages.
-- INV-5: Default chart render (all values default) is byte-identical to the
-  pre-feature chart.
+- INV-5: Default chart render (all values default) is equivalent to the
+  pre-feature chart except version-derived metadata (`helm.sh/chart` label,
+  default image tag from `appVersion`), which changes on routine version
+  bumps.

@@ -144,9 +144,8 @@ self-explanatory failure recovery.
   temporary certificate-monitoring gap does not cause an outage; invalid,
   unparseable, or mismatched files still fail fast.
 - What happens when a client connects with plain HTTP to the TLS-enabled
-  port? The connection is rejected at the transport layer, the service logs
-  the failed connection, and the service remains healthy and serving other
-  clients.
+  port? The connection is rejected at the transport layer by the TLS stack,
+  and the service remains healthy and keeps serving other clients.
 - What happens when the certificate lacks intermediate chain certificates?
   The service starts, but browser-style clients may fail verification; the
   documentation states that the full chain must be supplied.

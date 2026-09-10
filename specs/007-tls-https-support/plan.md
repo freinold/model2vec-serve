@@ -48,8 +48,10 @@ request hot path (TLS terminates at the acceptor layer only).
 **Constraints**: `unsafe_code = "forbid"`, `unwrap_used = "deny"` (Cargo
 lints); no key material in config values, logs, or error messages; no change
 to HTTP request/response contracts; additive Helm values only — a default
-`helm template` render MUST be byte-identical to the chart before this
-feature.
+`helm template` render MUST be equivalent to the chart before this feature
+(no new resources, mounts, args, or probe schemes), excluding version-derived
+metadata (`helm.sh/chart` label, default image tag from `appVersion`), which
+changes on routine version bumps.
 
 **Scale/Scope**: 1 binary (~10 source files touched), 1 Helm chart, ~3 new
 test files; single-feature scope, no new endpoints.

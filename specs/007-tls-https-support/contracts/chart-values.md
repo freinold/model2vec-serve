@@ -1,8 +1,10 @@
 # Contract: Chart Values (`tls` block)
 
-New optional values block. All defaults preserve the current renders: a
-`helm template` render with default values MUST be byte-identical to the chart
-before this feature (FR-011, SC-006).
+New optional values block. With all defaults, renders MUST be equivalent to
+the chart before this feature (FR-011, SC-006): no new resources, mounts,
+args, or probe schemes — version-derived metadata (`helm.sh/chart` label,
+default image tag from `appVersion`) is expected to change on routine version
+bumps and is excluded from the equivalence requirement.
 
 ```yaml
 tls:
@@ -16,8 +18,9 @@ tls:
 ## Rendered behavior when `enabled: true`
 
 - **Volume** `tls`: `secret.secretName: <existingSecret>`, `optional: false`
-  (a missing secret fails pod scheduling loudly instead of silently serving
-  without certs).
+  (a missing secret keeps the pod from starting — it stays
+  `Pending`/`ContainerCreating` with a `MountVolume.SetUp failed` event until
+  the secret exists — instead of silently serving without certs).
 - **VolumeMount** `tls` at `<mountPath>` (`readOnly: true`).
 - **Args** appended to the container command:
   `--tls-cert <mountPath>/<certKey>` and `--tls-key <mountPath>/<keyKey>`.

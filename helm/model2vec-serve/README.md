@@ -110,7 +110,9 @@ helm install model2vec-serve ./helm/model2vec-serve \
 
 With a passthrough ingress the edge forwards encrypted traffic without
 terminating TLS, so encryption reaches the application process. For the
-nginx ingress class:
+nginx ingress class: the controller must be started with the
+`--enable-ssl-passthrough` command-line flag (disabled by default), and the
+ingress uses the passthrough annotations:
 
 ```bash
 helm install model2vec-serve ./helm/model2vec-serve \

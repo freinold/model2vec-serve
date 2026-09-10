@@ -193,5 +193,11 @@
   excluded from steady-state comparisons; TLS work is confined to the
   acceptor, so the request hot path is untouched. Recorded with reproducible
   invocation commands per the constitution's benchmarking rule.
+- **Enforcement**: The bench carries a deterministic gate — setting
+  `TLS_BENCH_MAX_DELTA_PCT` (e.g. `10`) fails the run when the TLS p99 or
+  throughput delta exceeds the threshold. CI runs it as a reporting-only,
+  non-blocking job (shared-runner timing noise makes a hard 10% CI gate
+  flaky, and the constitution forbids flaky checks); the recorded deltas are
+  reviewed against the 10% budget before each release.
 - **Alternatives considered**: External load-test tooling — not needed;
   criterion + loopback is the project's established measurement path.
