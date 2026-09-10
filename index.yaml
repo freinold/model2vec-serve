@@ -2,6 +2,19 @@ apiVersion: v1
 entries:
   model2vec-serve:
   - apiVersion: v2
+    appVersion: 0.6.0
+    created: "2026-09-10T21:44:54.046719121Z"
+    description: Lightweight OpenAI/TEI compatible model2vec embeddings server
+    digest: f5a6ee1536c9570622d3e02b828edbf8c0c41237fe1f3ef0fa93caee43abe5bb
+    icon: https://raw.githubusercontent.com/freinold/model2vec-serve/main/docs/public/model2vec_logo.png
+    maintainers:
+    - name: freinold
+    name: model2vec-serve
+    type: application
+    urls:
+    - https://github.com/freinold/model2vec-serve/releases/download/model2vec-serve-0.6.0/model2vec-serve-0.6.0.tgz
+    version: 0.6.0
+  - apiVersion: v2
     appVersion: 0.5.1
     created: "2026-09-01T12:49:51.605713708Z"
     description: Lightweight OpenAI/TEI compatible model2vec embeddings server
@@ -40,4 +53,4 @@ entries:
     urls:
     - https://github.com/freinold/model2vec-serve/releases/download/model2vec-serve-0.2.0/model2vec-serve-0.2.0.tgz
     version: 0.2.0
-generated: "2026-09-01T12:49:51.605726123Z"
+generated: "2026-09-10T21:44:54.046738721Z"
