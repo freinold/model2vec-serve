@@ -49,6 +49,22 @@ cargo bench
 Benchmarks are located in `benches/embeddings.rs` and use Criterion with async
 Tokio support.
 
+### Transport benchmark (TLS vs plain HTTP)
+
+Run this manually before opening a PR after transport-relevant changes
+(`src/`, `benches/`, dependency bumps). The gate fails when the TLS
+median-latency or throughput delta versus plain HTTP exceeds 10% (SC-005);
+p99 is reported alongside for review, since it swings with runner noise on
+sub-millisecond loopback samples:
+
+```bash
+TLS_BENCH_MAX_DELTA_PCT=10 cargo bench --bench embeddings -- \
+  --measurement-time 3 --warm-up-time 1 --sample-size 10 "transport"
+```
+
+The benchmark is not part of CI — a steady-state TLS comparison needs a
+release-profile build that would slow every PR down.
+
 ## Validate Helm
 
 ```bash
