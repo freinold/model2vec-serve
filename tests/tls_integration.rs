@@ -48,11 +48,22 @@ fn plain_client() -> Client {
 }
 
 /// Spawn the shared app behind a rustls listener on an ephemeral port.
-async fn spawn_tls_server(files: &common::TlsFiles) -> (SocketAddr, JoinHandle<()>) {
+///
+/// Returns the bound address, the server task handle, and the TEI path
+/// identifier of the default model (for the per-model routes).
+async fn spawn_tls_server(
+    files: &common::TlsFiles,
+    api_key: Option<&str>,
+) -> (SocketAddr, JoinHandle<()>, String) {
     let tls =
         model2vec_serve::tls::load(&files.cert_path, &files.key_path).expect("valid TLS fixture");
-    let config = test_config(None);
+    let config = test_config(api_key.map(str::to_string));
     let state = AppState::new(config, metrics_handle()).expect("failed to load model");
+    let path_id = state
+        .registry
+        .path_identifier_for(state.registry.default_model_id())
+        .expect("default model should have a path identifier")
+        .to_string();
 
     let server = axum_server::bind_rustls(
         "127.0.0.1:0".parse().expect("valid loopback address"),
@@ -77,13 +88,18 @@ async fn spawn_tls_server(files: &common::TlsFiles) -> (SocketAddr, JoinHandle<(
         &format!("https://{addr}/health"),
     )
     .await;
-    (addr, join)
+    (addr, join, path_id)
 }
 
 /// Spawn the same app behind a plain HTTP listener on an ephemeral port.
-async fn spawn_plain_server() -> (SocketAddr, JoinHandle<()>) {
-    let config = test_config(None);
+async fn spawn_plain_server(api_key: Option<&str>) -> (SocketAddr, JoinHandle<()>, String) {
+    let config = test_config(api_key.map(str::to_string));
     let state = AppState::new(config, metrics_handle()).expect("failed to load model");
+    let path_id = state
+        .registry
+        .path_identifier_for(state.registry.default_model_id())
+        .expect("default model should have a path identifier")
+        .to_string();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .expect("failed to bind plain listener");
@@ -97,7 +113,7 @@ async fn spawn_plain_server() -> (SocketAddr, JoinHandle<()>) {
     });
 
     wait_until_ready(&plain_client(), &format!("http://{addr}/health")).await;
-    (addr, join)
+    (addr, join, path_id)
 }
 
 /// Poll the given URL until it answers 200 or the timeout elapses.
@@ -129,7 +145,7 @@ fn embed_payload() -> String {
 #[tokio::test]
 async fn all_endpoint_classes_served_over_https() {
     let files = tls_pair();
-    let (addr, server) = spawn_tls_server(&files).await;
+    let (addr, server, _) = spawn_tls_server(&files, None).await;
     let base = format!("https://{addr}");
     let client = pinned_client(&files.cert_der);
 
@@ -164,19 +180,39 @@ async fn all_endpoint_classes_served_over_https() {
 #[tokio::test]
 async fn https_response_equals_plain_http_response() {
     let files = tls_pair();
-    let (tls_addr, tls_server) = spawn_tls_server(&files).await;
-    let (plain_addr, plain_server) = spawn_plain_server().await;
+    let (tls_addr, tls_server, path_id) = spawn_tls_server(&files, None).await;
+    let (plain_addr, plain_server, _) = spawn_plain_server(None).await;
     let https = pinned_client(&files.cert_der);
     let plain = plain_client();
 
-    for (path, body) in [
-        ("/embed", Some(embed_payload())),
+    // `compare_body` is false for endpoints whose bodies legitimately differ
+    // between the two server instances (/metrics counters) or that return
+    // non-JSON content (/docs HTML); those are checked for status parity.
+    for (path, body, compare_body) in [
+        ("/health", None, true),
+        ("/ready", None, true),
+        ("/info", None, true),
+        ("/v1/models", None, true),
+        ("/docs", None, false),
+        ("/metrics", None, false),
+        ("/embed", Some(embed_payload()), true),
         (
             "/v1/embeddings",
             Some(json!({"input": "hello"}).to_string()),
+            true,
         ),
-        ("/v1/models", None),
-        ("/info", None),
+        // Error parity: the unknown-model error body must be identical too.
+        (
+            "/v1/embeddings",
+            Some(json!({"input": "hello", "model": "unknown-model"}).to_string()),
+            true,
+        ),
+        (
+            format!("/tei/{path_id}/embed").as_str(),
+            Some(embed_payload()),
+            true,
+        ),
+        (format!("/tei/{path_id}/info").as_str(), None, true),
     ] {
         let (tls_result, plain_result) = if let Some(payload) = body {
             let tls_future = https
@@ -203,6 +239,9 @@ async fn https_response_equals_plain_http_response() {
             plain_response.status(),
             "status for {path}"
         );
+        if !compare_body {
+            continue;
+        }
         assert_eq!(
             tls_response.json::<Value>().await.unwrap(),
             plain_response.json::<Value>().await.unwrap(),
@@ -215,9 +254,64 @@ async fn https_response_equals_plain_http_response() {
 }
 
 #[tokio::test]
+async fn https_auth_behaviour_matches_plain_http() {
+    let files = tls_pair();
+    let (tls_addr, tls_server, _) = spawn_tls_server(&files, Some("secret")).await;
+    let (plain_addr, plain_server, _) = spawn_plain_server(Some("secret")).await;
+    let https = pinned_client(&files.cert_der);
+    let plain = plain_client();
+
+    // (authorization header, expected status) — auth must behave identically
+    // over both transports, including the public operational endpoints.
+    for (header, expected) in [
+        (None, 401),
+        (Some("Bearer wrong"), 401),
+        (Some("Bearer secret"), 200),
+    ] {
+        let send = |client: &Client, url: String, header: Option<&str>| {
+            let mut request = client.post(url).header("content-type", "application/json");
+            if let Some(value) = header {
+                request = request.header("authorization", value);
+            }
+            request.body(embed_payload()).send()
+        };
+
+        let tls_status = send(&https, format!("https://{tls_addr}/embed"), header)
+            .await
+            .unwrap()
+            .status();
+        let plain_status = send(&plain, format!("http://{plain_addr}/embed"), header)
+            .await
+            .unwrap()
+            .status();
+        assert_eq!(tls_status, plain_status, "status for auth {header:?}");
+        assert_eq!(tls_status.as_u16(), expected, "auth {header:?}");
+    }
+
+    // Operational endpoints stay public with auth enabled, over both
+    // transports.
+    for (label, url) in [
+        ("health", format!("https://{tls_addr}/health")),
+        ("ready", format!("https://{tls_addr}/ready")),
+        ("metrics", format!("https://{tls_addr}/metrics")),
+    ] {
+        let status = pinned_client(&files.cert_der)
+            .get(&url)
+            .send()
+            .await
+            .unwrap()
+            .status();
+        assert_eq!(status.as_u16(), 200, "{label} stays public with auth on");
+    }
+
+    tls_server.abort();
+    plain_server.abort();
+}
+
+#[tokio::test]
 async fn plain_http_to_tls_port_fails_but_service_stays_healthy() {
     let files = tls_pair();
-    let (addr, server) = spawn_tls_server(&files).await;
+    let (addr, server, _) = spawn_tls_server(&files, None).await;
     let plain = plain_client();
 
     let rejected = plain.get(format!("http://{addr}/health")).send().await;
