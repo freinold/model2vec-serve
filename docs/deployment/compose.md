@@ -178,6 +178,8 @@ are never injected into the container as empty strings.
 | `MODEL` | service | two-model list (see *Served models* above) | Replace the served model set (comma-separated) |
 | `DEFAULT_MODEL` | service | first `MODEL` entry | Model answering requests without an explicit model; must be one of `MODEL` |
 | `API_KEY` | service | *(unset → auth off)* | Enables Bearer auth on all embedding and model-list endpoints (`/v1/embeddings`, `/v1/models`, `/embed`, `/info`, `/tei/{model_id}/embed`, `/tei/{model_id}/info`); `/health`, `/ready`, and `/metrics` stay public |
+| `TLS_CERT` | service | *(unset → plain HTTP)* | Path to the PEM TLS certificate; setting it together with `TLS_KEY` switches the port to HTTPS (single listener) |
+| `TLS_KEY` | service | *(unset)* | Path to the matching unencrypted PEM private key (files must be mounted — see *TLS/HTTPS* below) |
 | `MODEL_OWNER` | service | `minishlab` (service default) | Owner shown in `/v1/models` |
 | `MODEL_ALIAS` | service | *(unset)* | `KEY=ALIAS` pairs for `/tei/{model_id}/...` paths |
 | `MAX_BATCH_SIZE` | service | `256` (service default) | Max inputs per request |
@@ -197,6 +199,32 @@ If you enabled auth and want it off again, remove the `API_KEY` line from
 `.env` (or `unset API_KEY` in your shell) rather than setting it to an empty
 value. `/health`, `/ready`, and `/metrics` are always public either way.
 :::
+
+## TLS/HTTPS
+
+The service can terminate TLS itself, encrypting traffic end to end — for
+example all the way to the application inside the container. Uncomment
+`TLS_CERT`/`TLS_KEY` in `.env` and mount the certificate files by adding one
+volume entry to `docker-compose.yml` (a compose-file edit, like switching to
+a named volume):
+
+```yaml
+    volumes:
+      - ${MODEL2VEC_CACHE_DIR:-./models}:/models
+      - ./tls:/etc/model2vec-serve/tls:ro
+```
+
+With both variables set, the port serves HTTPS only (single listener) with
+identical endpoint behavior over `https://`; leave them unset for plain HTTP.
+Notes:
+
+- The certificate file should contain the full chain (leaf plus
+  intermediates).
+- PEM formats only; encrypted (passphrase-protected) keys are rejected.
+- TLS 1.2 and TLS 1.3 only; older protocol versions are refused.
+- Certificates are loaded at startup: rotating the files requires a container
+  restart (`docker compose restart`).
+- Mutual TLS (client certificate verification) is not supported.
 
 ## Operations
 

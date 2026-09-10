@@ -6,7 +6,11 @@
 use hf_hub::HFClientSync;
 use metrics_exporter_prometheus::PrometheusHandle;
 use model2vec_serve::{config::Config, routes::app, state::AppState, telemetry};
+use std::net::{IpAddr, Ipv4Addr};
+use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
+use tempfile::TempDir;
+use time::OffsetDateTime;
 
 const TEST_MODEL: &str = "minishlab/potion-base-2M";
 
@@ -54,6 +58,8 @@ pub fn test_config(api_key: Option<String>) -> Config {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     }
 }
 
@@ -82,6 +88,8 @@ pub fn test_config_with_models(
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     }
 }
 
@@ -105,6 +113,8 @@ pub fn test_config_with_aliases(
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     }
 }
 
@@ -162,4 +172,174 @@ pub fn alt_model_dir() -> String {
     }
 
     alt_dir.to_string_lossy().to_string()
+}
+
+/// TLS certificate fixture: paths to a certificate/key pair plus the temporary
+/// directories backing them.
+///
+/// The `dirs` field keeps the backing temporary directories alive until the
+/// fixture is dropped; tests only use the public path fields.
+pub struct TlsFiles {
+    dirs: Vec<TempDir>,
+    /// Path to the PEM certificate file (leaf, optionally with chain).
+    pub cert_path: PathBuf,
+    /// Path to the PEM private key file.
+    pub key_path: PathBuf,
+    /// DER bytes of the leaf certificate, for pinning it as a trust root.
+    pub cert_der: Vec<u8>,
+}
+
+impl TlsFiles {
+    /// Path to a file that does not exist inside the fixture directory.
+    pub fn missing_path(&self) -> PathBuf {
+        self.dirs
+            .first()
+            .expect("fixture always has one directory")
+            .path()
+            .join("does-not-exist.pem")
+    }
+}
+
+/// Generate a self-signed certificate and private key as PEM strings.
+///
+/// `not_after` overrides the certificate expiry (used to build expired
+/// fixtures); when `None` the rcgen default (about one week) applies. The
+/// certificate carries a `localhost` DNS SAN and a `127.0.0.1` IP SAN so the
+/// pinned-root test clients can verify the host they connect to.
+fn generate_pems(not_after: Option<OffsetDateTime>) -> (String, String, Vec<u8>) {
+    let key_pair = rcgen::KeyPair::generate().expect("failed to generate test key pair");
+    let mut params = rcgen::CertificateParams::new(vec!["localhost".to_string()])
+        .expect("valid subject alt name");
+    params
+        .distinguished_name
+        .push(rcgen::DnType::CommonName, "localhost");
+    params
+        .subject_alt_names
+        .push(rcgen::SanType::IpAddress(IpAddr::V4(Ipv4Addr::LOCALHOST)));
+    if let Some(expiry) = not_after {
+        params.not_before = OffsetDateTime::from_unix_timestamp(0).expect("valid unix epoch");
+        params.not_after = expiry;
+    }
+    let cert = params.self_signed(&key_pair).expect("failed to self-sign");
+    let cert_der = cert.der().as_ref().to_vec();
+    (cert.pem(), key_pair.serialize_pem(), cert_der)
+}
+
+/// Write the given PEM strings to a fresh temporary directory.
+fn write_pair(cert_pem: &str, key_pem: &str, cert_der: Vec<u8>) -> TlsFiles {
+    let dir = tempfile::tempdir().expect("failed to create temp dir");
+    let cert_path = dir.path().join("cert.pem");
+    let key_path = dir.path().join("key.pem");
+    std::fs::write(&cert_path, cert_pem).expect("failed to write cert fixture");
+    std::fs::write(&key_path, key_pem).expect("failed to write key fixture");
+    TlsFiles {
+        dirs: vec![dir],
+        cert_path,
+        key_path,
+        cert_der,
+    }
+}
+
+/// Generate a valid self-signed certificate/key pair.
+pub fn tls_pair() -> TlsFiles {
+    let (cert, key, cert_der) = generate_pems(None);
+    write_pair(&cert, &key, cert_der)
+}
+
+/// Generate a certificate/key pair whose key does not match the certificate.
+pub fn mismatched_tls_pair() -> TlsFiles {
+    let (cert, _, cert_der) = generate_pems(None);
+    let (_, key, _) = generate_pems(None);
+    write_pair(&cert, &key, cert_der)
+}
+
+/// Generate a certificate/key pair with an already expired certificate.
+pub fn expired_tls_pair() -> TlsFiles {
+    let expired = OffsetDateTime::from_unix_timestamp(1_000_000_000).expect("valid unix timestamp");
+    let (cert, key, cert_der) = generate_pems(Some(expired));
+    write_pair(&cert, &key, cert_der)
+}
+
+/// Generate a valid key with a certificate file containing non-PEM garbage.
+pub fn garbage_cert_tls_pair() -> TlsFiles {
+    let dir = tempfile::tempdir().expect("failed to create temp dir");
+    let cert_path = dir.path().join("cert.pem");
+    let key_path = dir.path().join("key.pem");
+    std::fs::write(&cert_path, b"this is not a pem file\n").expect("failed to write garbage");
+    let (_, key, _) = generate_pems(None);
+    std::fs::write(&key_path, key).expect("failed to write key fixture");
+    TlsFiles {
+        dirs: vec![dir],
+        cert_path,
+        key_path,
+        cert_der: Vec::new(),
+    }
+}
+
+/// Generate a garbage private-key file with a valid certificate.
+pub fn garbage_key_tls_pair() -> TlsFiles {
+    let dir = tempfile::tempdir().expect("failed to create temp dir");
+    let cert_path = dir.path().join("cert.pem");
+    let key_path = dir.path().join("key.pem");
+    let (cert, _, cert_der) = generate_pems(None);
+    std::fs::write(&cert_path, cert).expect("failed to write cert fixture");
+    std::fs::write(&key_path, b"\x00\x01\x02 not pem either\n").expect("failed to write garbage");
+    TlsFiles {
+        dirs: vec![dir],
+        cert_path,
+        key_path,
+        cert_der,
+    }
+}
+
+/// Generate a certificate with a private key exported as an encrypted PKCS#8
+/// PEM.
+///
+/// Prefers `openssl` (available in development and CI environments) to produce
+/// a genuine encrypted key; when the binary is unavailable, writes a
+/// PEM-label-correct stub instead. Both satisfy the E4 detection contract,
+/// which keys off the PEM label before any key parsing happens.
+pub fn encrypted_key_tls_pair() -> TlsFiles {
+    let pair = tls_pair();
+    let encrypted = encrypt_key_with_openssl(&pair.key_path).unwrap_or_else(encrypted_key_stub);
+    std::fs::write(&pair.key_path, encrypted).expect("failed to write encrypted key fixture");
+    pair
+}
+
+/// Convert a plaintext PEM key into an encrypted PKCS#8 PEM via `openssl`.
+///
+/// Returns `None` when the binary is missing or the conversion fails.
+fn encrypt_key_with_openssl(plain_key: &std::path::Path) -> Option<String> {
+    let output = std::process::Command::new("openssl")
+        .args([
+            "pkcs8",
+            "-topk8",
+            "-in",
+            &plain_key.to_string_lossy(),
+            "-passout",
+            "pass:test-password",
+            "-v2",
+            "aes256",
+        ])
+        .output()
+        .ok()?;
+    if output.status.success() {
+        String::from_utf8(output.stdout).ok()
+    } else {
+        None
+    }
+}
+
+/// PEM-label-correct encrypted-key stub for environments without `openssl`.
+///
+/// The label drives the E4 detection contract; the body never reaches a key
+/// parser because detection fails first.
+fn encrypted_key_stub() -> String {
+    [
+        "-----BEGIN ENCRYPTED PRIVATE KEY-----",
+        "TENYcnlwdmVydGVzdHN0dWJib2Nrb2xlaHNob2Nrb2xlaG9sYWhvbGFob2xh",
+        "-----END ENCRYPTED PRIVATE KEY-----",
+        "",
+    ]
+    .join("\n")
 }

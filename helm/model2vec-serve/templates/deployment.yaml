@@ -46,6 +46,12 @@ spec:
             - --api-key
             - $(API_KEY)
             {{- end }}
+            {{- if .Values.tls.enabled }}
+            - --tls-cert
+            - {{ printf "%s/%s" .Values.tls.mountPath .Values.tls.certKey | quote }}
+            - --tls-key
+            - {{ printf "%s/%s" .Values.tls.mountPath .Values.tls.keyKey | quote }}
+            {{- end }}
             {{- range .Values.args }}
             - {{ . | quote }}
             {{- end }}
@@ -79,16 +85,27 @@ spec:
             httpGet:
               path: /health
               port: http
+              {{- if .Values.tls.enabled }}
+              scheme: HTTPS
+              {{- end }}
           readinessProbe:
             httpGet:
               path: /ready
               port: http
+              {{- if .Values.tls.enabled }}
+              scheme: HTTPS
+              {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             {{- if .Values.persistence.enabled }}
             - name: models
               mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
+            {{- if .Values.tls.enabled }}
+            - name: tls
+              mountPath: {{ .Values.tls.mountPath }}
+              readOnly: true
             {{- end }}
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
@@ -98,6 +115,12 @@ spec:
         - name: models
           persistentVolumeClaim:
             claimName: {{ .Values.persistence.existingClaim | default (printf "%s-models" (include "model2vec-serve.fullname" .)) }}
+        {{- end }}
+        {{- if .Values.tls.enabled }}
+        - name: tls
+          secret:
+            secretName: {{ required "tls.existingSecret is required when tls.enabled is true" .Values.tls.existingSecret }}
+            optional: false
         {{- end }}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}

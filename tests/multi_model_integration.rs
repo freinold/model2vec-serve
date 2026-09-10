@@ -42,6 +42,8 @@ async fn two_models_load_and_embed() {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     let state = AppState::new(config, metrics_handle()).expect("failed to load models");
@@ -96,6 +98,8 @@ async fn partial_failure_keeps_healthy_model_ready() {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     let state =
@@ -140,6 +144,8 @@ async fn first_configured_failure_falls_back_to_first_loaded_default() {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     let state = AppState::new(config, metrics_handle())
@@ -207,6 +213,8 @@ async fn path_identifiers_are_derived_per_model() {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     let state = AppState::new(config, metrics_handle()).expect("failed to load models");
@@ -260,6 +268,8 @@ async fn alias_overrides_path_identifier() {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     let state = AppState::new(config, metrics_handle()).expect("failed to load models");
@@ -304,6 +314,8 @@ async fn duplicate_path_identifier_aborts_startup() {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     let Err(err) = AppState::new(config, metrics_handle()) else {
@@ -352,6 +364,8 @@ async fn three_models_reachable_via_own_paths() {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     let state = AppState::new(config, metrics_handle()).expect("failed to load models");
@@ -434,6 +448,8 @@ async fn per_model_paths_are_isolated() {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     let state = AppState::new(config, metrics_handle()).expect("failed to load models");
@@ -478,6 +494,8 @@ async fn unmatched_alias_key_aborts_startup() {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     let Err(err) = AppState::new(config, metrics_handle()) else {
@@ -513,6 +531,8 @@ async fn multiple_aliases_for_one_model_abort_startup() {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     let Err(err) = AppState::new(config, metrics_handle()) else {
@@ -550,6 +570,8 @@ async fn each_model_info_reports_its_own_metadata() {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     let state = AppState::new(config, metrics_handle()).expect("failed to load models");
@@ -641,6 +663,8 @@ async fn alias_path_info_reports_canonical_id() {
         max_input_length: 512,
         log_level: "warn".to_string(),
         request_timeout_seconds: 30,
+        tls_cert: None,
+        tls_key: None,
     };
 
     let state = AppState::new(config, metrics_handle()).expect("failed to load models");

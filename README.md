@@ -86,6 +86,18 @@ All configuration is passed as command-line arguments:
 | `--max-input-length` | `512` | Maximum tokens per input |
 | `--log-level` | `info` | Log level |
 | `--request-timeout-seconds` | `30` | Per-request timeout |
+| `--tls-cert` / `--tls-key` | none | PEM certificate and matching private key file paths; providing both enables HTTPS on the same port (single listener) |
+
+Serve over HTTPS by pointing both TLS options at mounted files — traffic is
+then encrypted end to end, all the way to the application inside the
+container:
+
+```bash
+cargo run --release -- \
+  --model minishlab/potion-multilingual-128M \
+  --tls-cert /etc/model2vec-serve/tls/tls.crt \
+  --tls-key /etc/model2vec-serve/tls/tls.key
+```
 
 ## Container
 

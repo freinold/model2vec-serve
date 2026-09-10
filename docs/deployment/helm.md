@@ -89,6 +89,7 @@ helm uninstall model2vec-serve
 | `service.type` | Kubernetes service type | `ClusterIP` |
 | `service.port` | Service port | `80` |
 | `service.targetPort` | Container port | `8080` |
+| `service.annotations` | Extra annotations merged into the Service metadata | `{}` |
 | `resources` | CPU/memory requests and limits | see `values.yaml` |
 | `autoscaling.enabled` | Enable Horizontal Pod Autoscaler | `false` |
 | `autoscaling.minReplicas` | Minimum replicas | `1` |
@@ -109,6 +110,11 @@ helm uninstall model2vec-serve
 | `persistence.size` | PVC storage request | `5Gi` |
 | `persistence.mountPath` | Mount path; `HOME` is set here so the HF cache lives at `<mountPath>/.cache/huggingface/hub` | `/models` |
 | `persistence.annotations` | PVC annotations | `{}` |
+| `tls.enabled` | Serve HTTPS from the container (single listener; disables plain HTTP) | `false` |
+| `tls.existingSecret` | Kubernetes secret with the cert/key entries (required when enabled) | `""` |
+| `tls.certKey` | Secret key holding the PEM certificate chain | `tls.crt` |
+| `tls.keyKey` | Secret key holding the PEM private key | `tls.key` |
+| `tls.mountPath` | Container mount path for the secret | `/etc/model2vec-serve/tls` |
 | `ingress.enabled` | Create an Ingress for external access | `false` |
 | `ingress.className` | Ingress class name | `""` |
 | `ingress.annotations` | Ingress annotations | `{}` |
@@ -171,6 +177,105 @@ helm install model2vec-serve ./helm/model2vec-serve \
   --set ingress.hosts[0].host=embeddings.example.com \
   --set ingress.extraLabels.environment=production
 ```
+
+## Application TLS (end-to-end encryption)
+
+By default the chart serves plain HTTP and TLS terminates at the edge in
+front of it (use `ingress.tls` for that mode). To encrypt traffic on every
+hop — all the way to the application inside the container — enable
+`tls.enabled` with an operator-managed secret. The chart mounts the secret as
+files, passes `--tls-cert`/`--tls-key`, serves HTTPS on the target port
+(single listener; plain HTTP is disabled), and switches probes to the HTTPS
+scheme.
+
+Provision the secret first (the chart never creates it):
+
+```bash
+kubectl create secret tls model2vec-serve-tls \
+  --cert=fullchain.pem --key=privkey.pem
+```
+
+```bash
+helm install model2vec-serve ./helm/model2vec-serve \
+  --set models[0]=minishlab/potion-multilingual-128M \
+  --set tls.enabled=true \
+  --set tls.existingSecret=model2vec-serve-tls
+```
+
+With a passthrough ingress the edge forwards encrypted traffic without
+terminating TLS, so encryption reaches the application process (nginx
+example). Note that the ingress-nginx controller must be started with the
+`--enable-ssl-passthrough` command-line flag — it is disabled by default:
+
+```bash
+helm install model2vec-serve ./helm/model2vec-serve \
+  --set models[0]=minishlab/potion-multilingual-128M \
+  --set tls.enabled=true \
+  --set tls.existingSecret=model2vec-serve-tls \
+  --set ingress.enabled=true \
+  --set ingress.className=nginx \
+  --set ingress.hosts[0].host=embeddings.example.com \
+  --set ingress.annotations."nginx\.ingress\.kubernetes\.io/ssl-passthrough"=true \
+  --set ingress.annotations."nginx\.ingress\.kubernetes\.io/backend-protocol"=HTTPS
+```
+
+Notes:
+
+- The certificate file should contain the full chain (leaf plus
+  intermediates).
+- Certificates are loaded once at startup. Renewal = update the secret +
+  `kubectl rollout restart deployment/<release>`; there is no hot reload.
+- `tls.enabled` without `tls.existingSecret` fails `helm template`/install
+  with a template error.
+- Mutual TLS (client certificate verification) is not supported.
+
+### Automatic certificates with cert-manager
+
+cert-manager can create and renew the certificate that either mode consumes.
+
+*Edge termination* (simplest): put the issuer annotations on the Ingress and
+name the secret in `ingress.tls`. cert-manager's ingress-shim issues and
+renews the certificate into that secret; the edge terminates TLS:
+
+```bash
+helm install model2vec-serve ./helm/model2vec-serve \
+  --set ingress.enabled=true \
+  --set ingress.className=nginx \
+  --set ingress.hosts[0].host=embeddings.example.com \
+  --set ingress.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-prod \
+  --set ingress.tls[0].secretName=model2vec-serve-tls \
+  --set "ingress.tls[0].hosts[0]=embeddings.example.com"
+```
+
+*Application TLS (end to end)*: have cert-manager issue into the secret the
+chart mounts. Point the issuer annotations (or a standalone
+`cert-manager.io/v1 Certificate` resource) at the same secret referenced by
+`tls.existingSecret`:
+
+```bash
+kubectl apply -f - <<'EOF'
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: model2vec-serve
+spec:
+  secretName: model2vec-serve-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames: [embeddings.example.com]
+EOF
+
+helm install model2vec-serve ./helm/model2vec-serve \
+  --set models[0]=minishlab/potion-multilingual-128M \
+  --set tls.enabled=true \
+  --set tls.existingSecret=model2vec-serve-tls
+```
+
+ACME HTTP01 still works with the passthrough example above (ssl-passthrough
+only affects port 443; the challenge is served on port 80) — or use a DNS01
+solver. After each renewal, restart the pods so the application reloads the
+certificate: `kubectl rollout restart deployment/<release>`.
 
 ## Resource defaults
 

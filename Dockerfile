@@ -26,7 +26,10 @@ COPY --from=builder /app/target/release/model2vec-serve /usr/local/bin/model2vec
 
 EXPOSE 8080
 
+# The health check probes plain HTTP first and falls back to HTTPS (-k
+# accepts self-signed certificates) so it works whether or not the service
+# is started with --tls-cert/--tls-key.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=300s --retries=3 \
-  CMD curl -fsS http://127.0.0.1:8080/health || exit 1
+  CMD curl -fsS http://127.0.0.1:8080/health || curl -fsSk https://127.0.0.1:8080/health || exit 1
 
 ENTRYPOINT ["model2vec-serve"]
