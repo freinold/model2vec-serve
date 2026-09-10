@@ -202,6 +202,9 @@
   reviewed against the 10% budget before each release. CI runs the gate as
   a reporting-only, non-blocking step (job-level `continue-on-error` still
   fails the check run; step-level keeps the check green with the failure
-  visible as an annotation).
+  visible as an annotation). The workflow is path-filtered (src/, benches/,
+  Cargo.toml, Cargo.lock) so docs/Helm/spec PRs skip the ~6-minute release
+  build entirely; it also runs on main pushes to keep the cache warm and
+  catch regressions after merge.
 - **Alternatives considered**: External load-test tooling — not needed;
   criterion + loopback is the project's established measurement path.

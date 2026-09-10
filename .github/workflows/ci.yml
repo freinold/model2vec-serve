@@ -78,22 +78,3 @@ jobs:
           persist-credentials: false
       - name: Validate Docker Compose configuration
         run: bash tests/compose/compose_config_test.sh
-
-  benchmark:
-    # SC-005 transport benchmark with the deterministic delta gate.
-    # Shared runners are noisy, so this job is reporting-only: the gate
-    # uses the noise-stable signals (median latency + throughput); p99 on
-    # sub-millisecond loopback samples swings ±20% between runners and
-    # stays in the recorded output for release review. continue-on-error
-    # lives on the step so the check run itself passes while the failure
-    # stays visible as an annotation.
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Run transport benchmark with SC-005 gate
-        continue-on-error: true
-        run: TLS_BENCH_MAX_DELTA_PCT=10 cargo bench --bench embeddings -- --measurement-time 3 --warm-up-time 1 --sample-size 10 "transport"
