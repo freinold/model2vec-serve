@@ -30,7 +30,7 @@
 ```bash
 helm install model2vec-serve \
   oci://ghcr.io/freinold/model2vec-serve/model2vec-serve \
-  --version 0.5.1
+  --version 0.6.0
 ```
 
 The ghcr.io helm package must be public for anonymous installs (one-time maintainer action; see spec Assumptions).
