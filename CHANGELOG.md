@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.5](https://github.com/freinold/model2vec-serve/compare/v0.5.4...v0.5.5) - 2026-09-10
+
+### Fixed
+
+- collapse nested if-let to satisfy the new clippy collapsible_if lint
+- adapt to axum-server 0.8 and reqwest 0.13
+- *(deps)* update rust dependencies
+
+### Other
+
+- *(deps)* track the stable toolchain as MSRV (1.98)
+- *(deps)* raise MSRV to 1.88 and update time to 0.3.55
+- Merge pull request #136 from freinold/release-plz-2026-09-10T18-52-01Z
+
 ## [0.5.4](https://github.com/freinold/model2vec-serve/compare/v0.5.3...v0.5.4) - 2026-09-10
 
 ### Other

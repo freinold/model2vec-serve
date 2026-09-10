@@ -1,6 +1,6 @@
 [package]
 name = "model2vec-serve"
-version = "0.5.4"
+version = "0.5.5"
 edition = "2024"
 # MSRV tracks the stable toolchain used by CI, the Docker builder, and
 # release tooling (this is an application, not a published library). A
