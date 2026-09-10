@@ -122,8 +122,8 @@ docker run -p 8080:8080 \
 Released images are published to GHCR:
 
 ```bash
-docker pull ghcr.io/freinold/model2vec-serve:v0.5.1
-docker run -p 8080:8080 -e MODEL=minishlab/potion-multilingual-128M ghcr.io/freinold/model2vec-serve:v0.5.1
+docker pull ghcr.io/freinold/model2vec-serve:v0.6.0
+docker run -p 8080:8080 -e MODEL=minishlab/potion-multilingual-128M ghcr.io/freinold/model2vec-serve:v0.6.0
 ```
 
 See [docs/deployment/docker.md](docs/deployment/docker.md) for the full release
@@ -153,7 +153,7 @@ The chart is published to the GitHub Container Registry:
 ```bash
 helm install model2vec-serve \
   oci://ghcr.io/freinold/model2vec-serve/model2vec-serve \
-  --version 0.5.1 \
+  --version 0.6.0 \
   --set models[0]=minishlab/potion-multilingual-128M \
   --set apiKey=your-secret-key
 ```

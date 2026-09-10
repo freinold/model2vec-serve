@@ -13,7 +13,7 @@ chart (see the [release automation](#release-automation) section):
 ```bash
 helm install model2vec-serve \
   oci://ghcr.io/freinold/model2vec-serve/model2vec-serve \
-  --version 0.5.1 \
+  --version 0.6.0 \
   --set models[0]=minishlab/potion-multilingual-128M \
   --set apiKey=your-secret-key
 ```
