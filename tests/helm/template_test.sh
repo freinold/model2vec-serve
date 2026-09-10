@@ -8,6 +8,17 @@ render() {
   helm template model2vec-serve "$CHART_DIR" "$@"
 }
 
+# Fail when a rendered document contains an unexpected pattern.
+# Note: `! cmd` is exempt from errexit, so negated greps never fail the
+# script; assertions must use this explicit check instead.
+assert_absent() {
+  local doc="$1" pattern="$2" label="$3"
+  if printf '%s\n' "$doc" | grep -q -- "$pattern"; then
+    echo "unexpected ${label} in render: ${pattern}"
+    exit 1
+  fi
+}
+
 echo "Running helm template tests..."
 
 # Default values render a single model and the standard resources.
@@ -62,9 +73,9 @@ echo "$OUTPUT" | grep -q 'value: "minishlab/potion-base-2M=base,minishlab/potion
 
 # Persistence is disabled by default: no PVC, no models volume, no HOME override.
 OUTPUT=$(render)
-! echo "$OUTPUT" | grep -q "kind: PersistentVolumeClaim"
-! echo "$OUTPUT" | grep -q "name: models"
-! echo "$OUTPUT" | grep -q "name: HOME"
+assert_absent "$OUTPUT" "kind: PersistentVolumeClaim" "PVC"
+assert_absent "$OUTPUT" "name: models" "models volume"
+assert_absent "$OUTPUT" "name: HOME" "HOME override"
 
 # Enabling persistence renders the claim and wires volume, mount, and HOME.
 OUTPUT=$(render --set persistence.enabled=true)
@@ -78,17 +89,17 @@ echo "$OUTPUT" | grep -A1 "name: HOME" | grep -qE 'value: "?/models"?'
 
 # An existing claim is referenced without creating a PVC.
 OUTPUT=$(render --set persistence.enabled=true --set persistence.existingClaim=my-models)
-! echo "$OUTPUT" | grep -q "kind: PersistentVolumeClaim"
+assert_absent "$OUTPUT" "kind: PersistentVolumeClaim" "PVC"
 echo "$OUTPUT" | grep -q "claimName: my-models"
 
 # Ingress is disabled by default.
 OUTPUT=$(render)
-! echo "$OUTPUT" | grep -q "kind: Ingress"
+assert_absent "$OUTPUT" "kind: Ingress" "Ingress"
 
 # The Service carries no annotations by default.
 OUTPUT=$(render)
 SERVICE_DOC=$(echo "$OUTPUT" | sed -n '/^kind: Service$/,/^---$/p')
-! echo "$SERVICE_DOC" | grep -q "annotations:"
+assert_absent "$SERVICE_DOC" "annotations:" "Service annotations"
 
 # service.annotations render on the Service metadata.
 OUTPUT=$(render \
@@ -123,10 +134,10 @@ echo "$INGRESS_DOC" | grep -q "secretName: tls-secret"
 # HTTPS probes.
 OUTPUT=$(render)
 DEPLOY_DOC=$(echo "$OUTPUT" | sed -n '/^kind: Deployment$/,/^---$/p')
-! echo "$DEPLOY_DOC" | grep -q -- '--tls-cert'
-! echo "$DEPLOY_DOC" | grep -q -- '--tls-key'
-! echo "$DEPLOY_DOC" | grep -q "scheme: HTTPS"
-! echo "$DEPLOY_DOC" | grep -q "name: tls$"
+assert_absent "$DEPLOY_DOC" '--tls-cert' "TLS argument"
+assert_absent "$DEPLOY_DOC" '--tls-key' "TLS argument"
+assert_absent "$DEPLOY_DOC" "scheme: HTTPS" "HTTPS probe"
+assert_absent "$DEPLOY_DOC" "name: tls$" "tls volume"
 
 # Enabling application TLS wires the secret volume, mount, args, and probes.
 OUTPUT=$(render --set tls.enabled=true --set tls.existingSecret=m2v-tls)
