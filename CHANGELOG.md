@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1](https://github.com/freinold/model2vec-serve/compare/v0.6.0...v0.6.1) - 2026-09-11
+
+### Other
+
+- *(deps)* lock file maintenance ([#148](https://github.com/freinold/model2vec-serve/pull/148))
+- *(helm)* release chart 0.6.0 with appVersion 0.6.0 ([#149](https://github.com/freinold/model2vec-serve/pull/149))
+
 ## [0.6.0](https://github.com/freinold/model2vec-serve/compare/v0.5.4...v0.6.0) - 2026-09-10
 
 ### Fixed
