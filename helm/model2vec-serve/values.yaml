@@ -4,7 +4,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/freinold/model2vec-serve
   pullPolicy: IfNotPresent
-  tag: ""
+  tag: "@sha256:886f9b8e27ca99502c089b1348f93fb0ad78ba38043c83b757f622e4866fb909"
 
 # List of Hugging Face model ids or local paths to load.
 # When set, this takes precedence over the deprecated `model` value.
